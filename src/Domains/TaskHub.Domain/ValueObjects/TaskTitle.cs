@@ -1,13 +1,19 @@
 ﻿using FluentResults;
 
-namespace TaskHub.Domain
+namespace TaskHub.Domain.ValueObjects
 {
-    public class TaskTitle(string value)
+    public class TaskTitle
     {
-        private const int MaxLength = 100;
-        public string Value { get; private set; } = value;
+        private TaskTitle(string value)
+        {
+            Value = value;
+        }
 
-        public static Result<TaskTitle> Create(string? value)
+        private const int MaxLength = 100;
+        public string Value { get; private set; }
+
+
+        public static Result<TaskTitle> Create(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return Result.Fail<TaskTitle>("Title cannot be empty or whitespace.");

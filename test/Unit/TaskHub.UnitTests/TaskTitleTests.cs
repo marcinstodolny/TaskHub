@@ -1,4 +1,4 @@
-﻿using TaskHub.Domain;
+﻿using TaskHub.Domain.ValueObjects;
 using Xunit;
 
 namespace TaskHub.UnitTests

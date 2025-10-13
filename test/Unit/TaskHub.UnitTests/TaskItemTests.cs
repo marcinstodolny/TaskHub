@@ -1,15 +1,18 @@
 ﻿using TaskHub.Domain;
+using TaskHub.Domain.Enums;
+using TaskHub.Domain.ValueObjects;
 using Xunit;
-using Task = TaskHub.Domain.Task;
-using TaskStatus = TaskHub.Domain.TaskStatus;
+using TaskItem = TaskHub.Domain.Entities.TaskItem;
+using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
 namespace TaskHub.UnitTests
 {
-    public class TaskTests
+    public class TaskItemTests
     {
-        public TaskTests()
+        private readonly TaskItem _taskItem;
+        public TaskItemTests()
         {
-
+            _taskItem = TaskItem.Create(Guid.NewGuid(), TaskTitle.Create("Test task").Value, null, TaskPriority.Normal).Value;
         }
 
         [Fact]
@@ -17,22 +20,14 @@ namespace TaskHub.UnitTests
         {
             // Arrange
             var title = TaskTitle.Create("Manual Testing").Value;
-            var now = DateTime.UtcNow;
             // Act
-            var result = Task.Create(title, now);
+            var result = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal);
 
             // Assert
             Assert.True(result.IsSuccess);
             var task = result.Value;
             Assert.NotEqual(Guid.Empty, task.Id);
-            Assert.Equal(TaskStatus.New, task.Status);
-            Assert.Equal(now, task.CreatedAt);
-
-            // Domain event
-            Assert.Single(task.DomainEvents);
-            Assert.IsType<TaskCreated>(task.DomainEvents[0]);
-            var ev = (TaskCreated)task.DomainEvents[0];
-            Assert.Equal(task.Id, ev.TaskId);
+            Assert.Equal(TaskStatus.Todo, task.Status);
         }
 
         [Fact]
@@ -42,43 +37,52 @@ namespace TaskHub.UnitTests
             TaskTitle? title = null;
 
             // Act
-            var result = Task.Create(title!, DateTime.Now);
+            var result = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal);
 
             // Assert
             Assert.True(result.IsFailed);
         }
 
         [Fact]
-        public void ChangeStatus_AllowedTransition_RaisesEvent()
+        public void Cancel_AlreadyCanceled_ShouldFails()
         {
             // Arrange
-            var title = TaskTitle.Create("Manual Testing").Value;
-            var task = Task.Create(title, DateTime.Now).Value;
+            _taskItem.Cancel(DateTime.Now);
 
             // Act
-            var result = task.ChangeStatus(TaskStatus.InProgress);
-
-            // Assert
-            Assert.True(result.IsSuccess);
-            Assert.Equal(TaskStatus.InProgress, task.Status);
-
-            var last = task.DomainEvents[^1];
-            var ev = Assert.IsType<TaskUpdated>(last);
-            Assert.Equal(task.Id, ev.TaskId);
-        }
-
-        [Fact]
-        public void ChangeStatus_DisallowedTransition_Fails()
-        {
-            // Arrange
-            var title = TaskTitle.Create("Manual Testing").Value;
-            var task = Task.Create(title, DateTime.Now).Value;
-
-            var result = task.ChangeStatus(TaskStatus.Done);
+            var result = _taskItem.Cancel(DateTime.Now);
 
             // Assert
             Assert.True(result.IsFailed);
-            Assert.Equal(TaskStatus.New, task.Status);
+            Assert.Equal(TaskStatus.Cancelled, _taskItem.Status);
+        }
+
+        [Fact]
+        public void Complete_AlreadyCompleted_ShouldFails()
+        {
+            // Arrange
+            _taskItem.Complete(DateTime.Now);
+
+            // Act
+            var result = _taskItem.Complete(DateTime.Now);
+
+            // Assert
+            Assert.True(result.IsFailed);
+            Assert.Equal(TaskStatus.Done, _taskItem.Status);
+        }
+
+        [Fact]
+        public void Start_AlreadyStarted_ShouldFails()
+        {
+            // Arrange
+            _taskItem.Start(DateTime.Now);
+
+            // Act
+            var result = _taskItem.Start(DateTime.Now);
+
+            // Assert
+            Assert.True(result.IsFailed);
+            Assert.Equal(TaskStatus.InProgress, _taskItem.Status);
         }
 
         [Fact]
@@ -86,7 +90,7 @@ namespace TaskHub.UnitTests
         {
             // Arrange
             var title = TaskTitle.Create("Manual Testing").Value;
-            var task = Task.Create(title, DateTime.Now).Value;
+            var task = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal).Value;
 
             var newTitle = TaskTitle.Create("Different title").Value;
 
@@ -106,11 +110,9 @@ namespace TaskHub.UnitTests
         public void UpdateTitle_Fails_If_Title_Is_Null()
         {
             // Arrange
-            var title = TaskTitle.Create("Manual Testing").Value;
-            var task = Task.Create(title, DateTime.Now).Value;
 
             // Act
-            var result = task.UpdateTitle(null);
+            var result = _taskItem.UpdateTitle(null);
 
             // Assert
             Assert.True(result.IsFailed);
