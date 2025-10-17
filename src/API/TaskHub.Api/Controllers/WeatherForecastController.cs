@@ -1,4 +1,7 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using TaskHub.Application.Queries;
+using TaskHub.Domain.Entities;
 
 namespace TaskHub.Api.Controllers
 {
@@ -12,10 +15,12 @@ namespace TaskHub.Api.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
+        private readonly IMediator _mediator;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IMediator mediator)
         {
             _logger = logger;
+            _mediator = mediator;
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
@@ -28,6 +33,14 @@ namespace TaskHub.Api.Controllers
                 Summary = Summaries[Random.Shared.Next(Summaries.Length)]
             })
             .ToArray();
+        }
+
+        [HttpGet("{taskListId:guid}/tasks")]
+        public async Task<ActionResult<IReadOnlyCollection<TaskItem>>> GetTasks(Guid taskListId, CancellationToken ct)
+        {
+            var tasks = await _mediator.Send(new GetTaskListQuery(taskListId), ct);
+  
+            return tasks.IsFailed ? NotFound(tasks) : Ok(tasks);
         }
     }
 }

@@ -1,4 +1,7 @@
 
+using TaskHub.Application;
+using TaskHub.Infrastructure;
+
 namespace TaskHub.Api
 {
     public class Program
@@ -14,6 +17,8 @@ namespace TaskHub.Api
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddSignalR();
+            builder.Services.AddApplication();
+            builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
             var app = builder.Build();
 
