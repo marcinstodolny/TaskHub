@@ -1,8 +1,8 @@
 ﻿using TaskHub.Application.abstraction;
 
-namespace TaskHub.Infrastructure
+namespace TaskHub.Infrastructure.Time
 {
-    public class DatetimeProvider : IDateTimeProvider
+    public class DateTimeProvider : IDateTimeProvider
     {
         public DateTime UtcNow() => DateTime.UtcNow;
     }
