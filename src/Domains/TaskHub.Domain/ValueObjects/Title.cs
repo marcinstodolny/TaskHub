@@ -2,9 +2,9 @@
 
 namespace TaskHub.Domain.ValueObjects
 {
-    public class TaskTitle
+    public class Title
     {
-        private TaskTitle(string value)
+        private Title(string value)
         {
             Value = value;
         }
@@ -13,17 +13,17 @@ namespace TaskHub.Domain.ValueObjects
         public string Value { get; private set; }
 
 
-        public static Result<TaskTitle> Create(string value)
+        public static Result<Title> Create(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
-                return Result.Fail<TaskTitle>("Title cannot be empty or whitespace.");
+                return Result.Fail<Title>("Title cannot be empty or whitespace.");
 
             var trimmed = value.Trim();
 
             if (trimmed.Length > MaxLength)
-                return Result.Fail<TaskTitle>($"Title cannot exceed {MaxLength} characters.");
+                return Result.Fail<Title>($"Title cannot exceed {MaxLength} characters.");
 
-            return Result.Ok(new TaskTitle(trimmed));
+            return Result.Ok(new Title(trimmed));
         }
     }
 }

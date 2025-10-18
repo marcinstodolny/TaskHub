@@ -19,12 +19,12 @@ namespace TaskHub.Infrastructure.Persistence.Configurations
 
             builder.OwnsOne(x => x.Title, tb =>
             {
-                tb.Property(p => p.Value).HasColumnName("title").HasMaxLength(200).IsRequired();
+                tb.Property(p => p.Value).HasColumnName("Title").HasMaxLength(200).IsRequired();
             });
 
             builder.OwnsOne(x => x.Description, db =>
             {
-                db.Property(p => p.Value).HasColumnName("description").HasMaxLength(2000);
+                db.Property(p => p.Value).HasColumnName("Description").HasMaxLength(2000);
             });
 
             builder.HasIndex(x => new { x.TaskListId, x.Status });

@@ -7,9 +7,14 @@ namespace TaskHub.Infrastructure.Repositories.Query
 {
     internal sealed class TaskListQueryRepository(TaskHubDbContext db) : ITaskListQueryRepository
     {
-        public async Task<TaskList?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        public async Task<TaskList?> GetByIdAsync(Guid id, CancellationToken ct = default) //TODO Dapper
         {
             return await db.TaskLists.FirstOrDefaultAsync(t => t.Id == id, ct);
+        }
+
+        public async Task<TaskList?> GetByTitleAsync(string title, CancellationToken ct = default) //TODO Dapper
+        {
+            return await db.TaskLists.FirstOrDefaultAsync(t => t.Title.Value == title, ct);
         }
     }
 }

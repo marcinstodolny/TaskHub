@@ -12,7 +12,7 @@ using TaskHub.Infrastructure.Persistence;
 namespace TaskHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TaskHubDbContext))]
-    [Migration("20251017135909_InitialCreate")]
+    [Migration("20251018020304_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -64,11 +64,6 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -85,16 +80,16 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsOne("TaskHub.Domain.ValueObjects.TaskDescription", "Description", b1 =>
+                    b.OwnsOne("TaskHub.Domain.ValueObjects.Title", "Title", b1 =>
                         {
                             b1.Property<Guid>("TaskItemId")
                                 .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("Value")
                                 .IsRequired()
-                                .HasMaxLength(2000)
-                                .HasColumnType("nvarchar(2000)")
-                                .HasColumnName("description");
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)")
+                                .HasColumnName("Title");
 
                             b1.HasKey("TaskItemId");
 
@@ -104,16 +99,16 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("TaskItemId");
                         });
 
-                    b.OwnsOne("TaskHub.Domain.ValueObjects.TaskTitle", "Title", b1 =>
+                    b.OwnsOne("TaskHub.Domain.ValueObjects.TaskDescription", "Description", b1 =>
                         {
                             b1.Property<Guid>("TaskItemId")
                                 .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("Value")
                                 .IsRequired()
-                                .HasMaxLength(200)
-                                .HasColumnType("nvarchar(200)")
-                                .HasColumnName("title");
+                                .HasMaxLength(2000)
+                                .HasColumnType("nvarchar(2000)")
+                                .HasColumnName("Description");
 
                             b1.HasKey("TaskItemId");
 
@@ -124,6 +119,31 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Description");
+
+                    b.Navigation("Title")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TaskHub.Domain.Entities.TaskList", b =>
+                {
+                    b.OwnsOne("TaskHub.Domain.ValueObjects.Title", "Title", b1 =>
+                        {
+                            b1.Property<Guid>("TaskListId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("Title");
+
+                            b1.HasKey("TaskListId");
+
+                            b1.ToTable("task_lists");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TaskListId");
+                        });
 
                     b.Navigation("Title")
                         .IsRequired();
