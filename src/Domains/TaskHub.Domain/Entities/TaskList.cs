@@ -10,35 +10,28 @@ namespace TaskHub.Domain.Entities
 
         private readonly List<TaskItem> _tasks = new();
         public IReadOnlyCollection<TaskItem> Tasks => _tasks.AsReadOnly();
+        public Title Title { get; private set; }
+
         private TaskList() { }
 
-        private TaskList(Guid id, string name) : base(id)
+        private TaskList(Guid id, Title title) : base(id)
         {
-            Name = name.Trim();
+            Title = title;
         }
 
-        public string Name { get; private set; } = null!;
-
-
-        public static Result<TaskList> Create(string name)
+        public static Result<TaskList> Create(Title title)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                return Result.Fail<TaskList>("List name is required.");
-
-            return new TaskList(Guid.NewGuid(), name);
+            return new TaskList(Guid.NewGuid(), title);
         }
 
 
-        public Result Rename(string name)
+        public Result Rename(Title title)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                return Result.Fail("List name is required.");
-            Name = name.Trim();
+            Title = title;
             return Result.Ok();
         }
 
-
-        public Result<TaskItem> AddTask(TaskTitle title, TaskDescription? description, TaskPriority priority)
+        public Result<TaskItem> AddTask(Title title, TaskDescription? description, TaskPriority priority)
         {
             var task = TaskItem.Create(Id, title, description, priority);
             if (task.IsFailed)

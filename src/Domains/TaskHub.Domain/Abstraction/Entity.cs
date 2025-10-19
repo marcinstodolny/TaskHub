@@ -10,7 +10,7 @@ namespace TaskHub.Domain.Abstraction
 
         public TId Id { get; protected set; }
         public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; protected set; }
+        public DateTime? UpdatedAt { get; protected set; }
 
         private readonly List<IDomainEvent> _domainEvents = new();
         public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents;

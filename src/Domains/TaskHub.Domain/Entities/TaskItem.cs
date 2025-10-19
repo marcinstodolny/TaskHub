@@ -9,13 +9,13 @@ namespace TaskHub.Domain.Entities
     public class TaskItem : Entity<Guid>
     {
         public Guid TaskListId { get; private set; }
-        public TaskTitle Title { get; private set; }
+        public Title Title { get; private set; }
         public TaskDescription? Description { get; private set; }
         public TaskPriority Priority { get; private set; }
         public TaskStatus Status { get; private set; }
 
         public TaskItem() { }
-        private TaskItem(Guid id, Guid taskListId, TaskTitle title, TaskDescription? description, TaskPriority priority, TaskStatus status) : base(id)
+        private TaskItem(Guid id, Guid taskListId, Title title, TaskDescription? description, TaskPriority priority, TaskStatus status) : base(id)
         {
             TaskListId = taskListId;
             Title = title;
@@ -24,7 +24,7 @@ namespace TaskHub.Domain.Entities
             Status = status;
         }
 
-        public static Result<TaskItem> Create(Guid taskListId, TaskTitle title, TaskDescription? description, TaskPriority priority)
+        public static Result<TaskItem> Create(Guid taskListId, Title title, TaskDescription? description, TaskPriority priority)
         {
             if (string.IsNullOrWhiteSpace(title?.Value))
                 return Result.Fail<TaskItem>("Title is required.");
@@ -35,7 +35,7 @@ namespace TaskHub.Domain.Entities
             return Result.Ok(task);
         }
 
-        public Result UpdateTitle(TaskTitle? title)
+        public Result UpdateTitle(Title? title)
         {
             if (string.IsNullOrWhiteSpace(title?.Value))
                 return Result.Fail("Title is required.");

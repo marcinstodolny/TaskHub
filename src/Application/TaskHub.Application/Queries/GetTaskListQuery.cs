@@ -1,7 +1,7 @@
 ﻿using FluentResults;
 using FluentValidation;
 using MediatR;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.Queries
@@ -12,7 +12,7 @@ namespace TaskHub.Application.Queries
     {
         public async Task<Result<List<TaskItem>>> Handle(GetTaskListQuery request, CancellationToken ct)
         {
-            var list = await taskListQueryRepository.GetTasksByListIdAsync(request.TaskListId, ct);
+            var list = await taskListQueryRepository.GetByIdAsync(request.TaskListId, ct);
             return list?.Tasks.ToList() ?? Result.Fail<List<TaskItem>>($"TaskList {request.TaskListId} not found.");
         }
     }

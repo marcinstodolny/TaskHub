@@ -2,16 +2,18 @@
 using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
+using TaskHub.Application.abstraction.Repository.Command;
+using TaskHub.Domain.Entities;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Commands
 {
-    public sealed record CreateTaskCommand(Guid TaskListId, string Title, string? Description, DateTime? DueDateUtc, TaskPriority Priority) : IRequest<Result<Guid>>;
+    public sealed record CreateTaskItemCommand(Guid TaskListId, string Title, string? Description, DateTime? DueDateUtc, TaskPriority Priority) : IRequest<Result<Guid>>;
 
-    public sealed class CreateTaskHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository) : IRequestHandler<CreateTaskCommand, Result<Guid>>
+    public sealed class CreateTaskItemHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository, ITaskItemCommandRepository taskItemCommandRepository) : IRequestHandler<CreateTaskItemCommand, Result<Guid>>
     {
-        public async Task<Result<Guid>> Handle(CreateTaskCommand request, CancellationToken ct)
+        public async Task<Result<Guid>> Handle(CreateTaskItemCommand request, CancellationToken ct)
         {
             var getResult = await taskListCommandRepository.GetByIdAsync(request.TaskListId, ct);
             if (getResult.IsFailed)
@@ -19,7 +21,7 @@ namespace TaskHub.Application.Commands
                 return Result.Fail(getResult.Errors);
             }
 
-            var titleResult = TaskTitle.Create(request.Title);
+            var titleResult = Title.Create(request.Title);
             if (titleResult.IsFailed)
             {
                 return Result.Fail(titleResult.Errors);
@@ -30,16 +32,22 @@ namespace TaskHub.Application.Commands
                 return Result.Fail(descriptionResult.Errors);
             }
 
-            var addResult = getResult.Value.AddTask(titleResult.Value, descriptionResult?.Value, request.Priority);
+            var createResult = TaskItem.Create(request.TaskListId, titleResult.Value, descriptionResult?.Value, request.Priority);
+            if (createResult.IsFailed)
+            {
+                return Result.Fail(createResult.Errors);
+            }
+
+            await taskItemCommandRepository.AddAsync(createResult.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
-            return addResult.Value.Id;
+            return createResult.Value.Id;
         }
     }
 
-    public sealed class CreateTaskValidator : AbstractValidator<CreateTaskCommand>
+    public sealed class CreateTaskItemValidator : AbstractValidator<CreateTaskItemCommand>
     {
-        public CreateTaskValidator()
+        public CreateTaskItemValidator()
         {
             RuleFor(x => x.TaskListId).NotEmpty();
             RuleFor(x => x.Title).NotEmpty().MaximumLength(100);
