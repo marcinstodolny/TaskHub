@@ -9,7 +9,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
     {
         public async Task<TaskItem?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            return await db.TaskItems.FirstOrDefaultAsync(t => t.Id == id, ct);
+            return await db.Set<TaskItem>().FirstOrDefaultAsync(t => t.Id == id, ct);
         }
     }
 }

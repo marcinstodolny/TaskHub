@@ -9,12 +9,12 @@ namespace TaskHub.Infrastructure.Repositories.Query
     {
         public async Task<TaskList?> GetByIdAsync(Guid id, CancellationToken ct = default) //TODO Dapper
         {
-            return await db.TaskLists.FirstOrDefaultAsync(t => t.Id == id, ct);
+            return await db.Set<TaskList>().FirstOrDefaultAsync(t => t.Id == id, ct);
         }
 
         public async Task<TaskList?> GetByTitleAsync(string title, CancellationToken ct = default) //TODO Dapper
         {
-            return await db.TaskLists.FirstOrDefaultAsync(t => t.Title.Value == title, ct);
+            return await db.Set<TaskList>().FirstOrDefaultAsync(t => t.Title.Value == title, ct);
         }
     }
 }
