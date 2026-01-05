@@ -3,17 +3,17 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Response;
 using TaskHub.Domain.Entities;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Commands
 {
-    public sealed record CreateTaskListCommand(string Title) : IRequest<Result<Guid>>;
+    public sealed record CreateTaskListCommand(string Title) : IRequest<Result<TaskListResponse>>;
 
-    public sealed class CreateTaskListCommandHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository) : IRequestHandler<CreateTaskListCommand, Result<Guid>>
+    public sealed class CreateTaskListCommandHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository) : IRequestHandler<CreateTaskListCommand, Result<TaskListResponse>>
     {
-        public async Task<Result<Guid>> Handle(CreateTaskListCommand request, CancellationToken ct)
+        public async Task<Result<TaskListResponse>> Handle(CreateTaskListCommand request, CancellationToken ct)
         {
             var titleResult = Title.Create(request.Title);
             if (titleResult.IsFailed)
@@ -29,7 +29,7 @@ namespace TaskHub.Application.Commands
             await taskListCommandRepository.AddAsync(taskList.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
-            return taskList.Value.Id;
+            return new TaskListResponse() { Id = taskList.Value.Id, Title = taskList.Value.Title.Value };
         }
     }
 

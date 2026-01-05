@@ -45,9 +45,9 @@ namespace TaskHub.Application.Commands
         }
     }
 
-    public sealed class CreateTaskItemValidator : AbstractValidator<CreateTaskItemCommand>
+    public sealed class CreateTaskItemCommandValidator : AbstractValidator<CreateTaskItemCommand>
     {
-        public CreateTaskItemValidator()
+        public CreateTaskItemCommandValidator()
         {
             RuleFor(x => x.TaskListId).NotEmpty();
             RuleFor(x => x.Title).NotEmpty().MaximumLength(100);

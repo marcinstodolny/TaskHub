@@ -1,10 +1,12 @@
-﻿using TaskHub.Domain.Entities;
+﻿using TaskHub.Application.Response;
+using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.abstraction.Repository.Query
 {
     public interface ITaskListQueryRepository
     {
-        Task<TaskList?> GetByIdAsync(Guid listId, CancellationToken ct);
-        Task<TaskList?> GetByTitleAsync(string title, CancellationToken ct);
+        Task<List<TaskListResponse>> GetAllAsync(CancellationToken ct); //TODO pagination
+        Task<TaskListResponse?> GetByIdAsync(Guid listId, CancellationToken ct);
+        Task<TaskListResponse?> GetByTitleAsync(string title, CancellationToken ct);
     }
 }

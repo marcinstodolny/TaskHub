@@ -7,9 +7,9 @@ namespace TaskHub.Infrastructure.Repositories.Query
 {
     internal sealed class TaskItemQueryRepository(TaskHubDbContext db) : ITaskItemQueryRepository
     {
-        public async Task<TaskItem?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        public async Task<TaskItem?> GetByIdAsync(Guid id, CancellationToken ct = default)  //TODO Dapper
         {
-            return await db.TaskItems.FirstOrDefaultAsync(t => t.Id == id, ct);
+            return await db.Set<TaskItem>().FirstOrDefaultAsync(t => t.Id == id, ct);
         }
     }
 }

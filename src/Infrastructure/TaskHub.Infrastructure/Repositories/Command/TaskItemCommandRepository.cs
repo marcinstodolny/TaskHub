@@ -10,17 +10,17 @@ namespace TaskHub.Infrastructure.Repositories.Command
     {
         public async Task AddAsync(TaskItem task, CancellationToken ct)
         {
-            await db.AddAsync(task, ct);
+            await db.TaskItems.AddAsync(task, ct);
         }
 
         public void Remove(TaskItem task)
         {
-            db.Remove(task);
+            db.TaskItems.Remove(task);
         }
 
         public async Task<Result<TaskItem>> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            var task = await db.Set<TaskItem>().FirstOrDefaultAsync(t => t.Id == id, ct);
+            var task = await db.TaskItems.FirstOrDefaultAsync(t => t.Id == id, ct);
             return task is null ? Result.Fail($"Task with id {id} not found") : task;
         }
     }
