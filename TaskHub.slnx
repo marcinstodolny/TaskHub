@@ -25,4 +25,7 @@
   <Folder Name="/test/Unit/">
     <Project Path="test/Unit/TaskHub.UnitTests/TaskHub.UnitTests.csproj" Id="4c2304c7-7643-43f2-b89c-0ddd70e87575" />
   </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
 </Solution>
