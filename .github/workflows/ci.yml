@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - main
+      - development
   pull_request:
+    branches:
+      - main
+      - development
+  workflow_dispatch:
 
 jobs:
   test:
@@ -12,13 +17,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install .NET SDK 10.0
-        run: |
-          curl -sSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
-          bash dotnet-install.sh --channel 10.0 --install-dir "$HOME/.dotnet"
-          echo "$HOME/.dotnet" >> "$GITHUB_PATH"
-          echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
+         - name: Setup .NET SDK 10.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
 
       - name: Verify Docker access
         run: docker info
