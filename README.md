@@ -24,16 +24,17 @@ TaskHub is a sample .NET solution showcasing **CQRS**, **DDD-style layering**, *
 - Docker (required for integration tests and local SQL Server)
 - .NET SDK 10 (preview)
 
-## Getting started
+## Configuration
 
-### Run with Docker Compose
+### Docker Compose
 
-Set environment variables:
+Set the required environment variables before running Docker Compose:
 
 ```bash
 export MSSQL_SA_PASSWORD='YourStrong!Passw0rd'
 export USER_SECRETS_PATH="$HOME/.microsoft/usersecrets"
 export HTTPS_CERTS_PATH="$HOME/.aspnet/https"
+```
 
 Then run:
 
