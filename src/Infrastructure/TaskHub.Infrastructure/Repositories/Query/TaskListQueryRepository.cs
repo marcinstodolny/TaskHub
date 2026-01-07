@@ -10,7 +10,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
     {
         public async Task<List<TaskListResponse>> GetAllAsync(CancellationToken ct = default) //TODO Dapper
         {
-            return (await db.Set<TaskList>().ToListAsync(cancellationToken: ct)).Select(t => new TaskListResponse
+            return (await db.Set<TaskList>().Include(taskList => taskList.Tasks).ToListAsync(cancellationToken: ct)).Select(t => new TaskListResponse
             {
                 Title = t.Title.Value, Id = t.Id,
                 Tasks = t.Tasks.Select(task => new TaskItemResponse { Id = task.Id, Title = task.Title.Value }).ToList()
@@ -30,7 +30,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
 
         public async Task<TaskListResponse?> GetByTitleAsync(string title, CancellationToken ct = default) //TODO Dapper
         {
-            var list = await db.Set<TaskList>().FirstOrDefaultAsync(t => t.Title.Value == title, ct);
+            var list = await db.Set<TaskList>().Include(taskList => taskList.Tasks).FirstOrDefaultAsync(t => t.Title.Value == title, ct);
             return list is null ? null : new TaskListResponse 
             {
                 Id = list.Id, Title = list.Title.Value,

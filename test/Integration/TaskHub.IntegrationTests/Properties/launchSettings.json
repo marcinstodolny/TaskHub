@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "TaskHub.IntegrationTests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:37458;http://localhost:37459"
+    }
+  }
+}

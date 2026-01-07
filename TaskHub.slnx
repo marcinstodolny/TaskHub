@@ -13,7 +13,7 @@
     <Project Path="src/Infrastructure/TaskHub.Infrastructure/TaskHub.Infrastructure.csproj" Id="0f72a60a-0b3b-46c9-8368-bdf882e6326e" />
   </Folder>
   <Folder Name="/src/Web/">
-    <Project Path="SRC/Web/TaskHub.Web/TaskHub.Web.csproj" Id="0b41b997-03eb-406d-ab5a-eba6fb4a09df" />
+    <Project Path="src/Web/TaskHub.Web/TaskHub.Web.csproj" Id="0b41b997-03eb-406d-ab5a-eba6fb4a09df" />
   </Folder>
   <Folder Name="/src/WPF/">
     <Project Path="src/WPF/TaskHub.WPFClient/TaskHub.WPFClient.csproj" Id="33d27e14-e389-403c-9749-9b5cb5e598ef" />
@@ -25,4 +25,7 @@
   <Folder Name="/test/Unit/">
     <Project Path="test/Unit/TaskHub.UnitTests/TaskHub.UnitTests.csproj" Id="4c2304c7-7643-43f2-b89c-0ddd70e87575" />
   </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
 </Solution>
