@@ -1,12 +1,8 @@
 ﻿using Dapper;
 using Microsoft.EntityFrameworkCore;
-using System.Net.NetworkInformation;
 using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Application.Response;
-using TaskHub.Domain.ValueObjects;
 using TaskHub.Infrastructure.Persistence;
-using static Dapper.SqlMapper;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace TaskHub.Infrastructure.Repositories.Query
 {

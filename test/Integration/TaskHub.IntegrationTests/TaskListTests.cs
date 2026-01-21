@@ -15,32 +15,33 @@ public class TaskListTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createResult = await fixture.SendAsync(new CreateTaskListCommand("My list"));
+        const string listTitle = "My Task List";
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand(listTitle));
 
-        var createTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createResult.Value.Id, "My task", "description", DateTime.Now, TaskPriority.High));
+        var createTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createListResult.Value.Id, "First task", "First task description", DateTime.Now, TaskPriority.High));
         
         createTaskItemResult.IsSuccess.Should().BeTrue();
 
-        var secondCreateTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createResult.Value.Id, "Second Task", "Second description", DateTime.Now.AddDays(5), TaskPriority.Critical));
+        var secondCreateTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createListResult.Value.Id, "Second Task", "Second task description", DateTime.Now.AddDays(5), TaskPriority.Critical));
 
-        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(createResult.Value.Id));
+        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(createListResult.Value.Id));
 
         var getAllResult = await fixture.SendAsync(new GetTaskListsQuery());
 
-        createResult.IsSuccess.Should().BeTrue();
-        createResult.Value.Title.Should().Be("My list");
+        Assert.True(createListResult.IsSuccess);
+        Assert.Equal(listTitle, createListResult.Value.Title);
 
-        createTaskItemResult.IsSuccess.Should().BeTrue();
-        secondCreateTaskItemResult.IsSuccess.Should().BeTrue();
+        Assert.True(createTaskItemResult.IsSuccess);
+        Assert.True(secondCreateTaskItemResult.IsSuccess);
 
-        getResult.IsSuccess.Should().BeTrue();
-        getResult.Value.Title.Should().Be("My list");
-        getResult.Value.Id.Should().Be(createResult.Value.Id);
-        getResult.Value.Tasks.Should().HaveCount(2);
+        Assert.True(getResult.IsSuccess);
+        Assert.Equal(getResult.Value.Id, createListResult.Value.Id);
+        Assert.Equal(listTitle, getResult.Value.Title);
+        Assert.Equal(2, getResult.Value.Tasks.Count);
 
-        getAllResult.IsSuccess.Should().BeTrue();
-        getAllResult.Value.Should().ContainSingle(list =>
-            list.Id == createResult.Value.Id &&
-            list.Title == "My list");
+        Assert.True(getAllResult.IsSuccess);
+        Assert.Equal(2, getAllResult.Value.Count);
+
+        Assert.Contains(getAllResult.Value, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
     }
 }
