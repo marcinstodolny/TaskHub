@@ -11,7 +11,7 @@ namespace TaskHub.IntegrationTests;
 public class TaskListTests(IntegrationTestFixture fixture)
 {
     [Fact]
-    public async Task Should_create_task_list()
+    public async Task Create_valid_ShouldSuccess()
     {
         await fixture.ResetAsync();
 
@@ -40,8 +40,64 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.Equal(2, getResult.Value.Tasks.Count);
 
         Assert.True(getAllResult.IsSuccess);
-        Assert.Equal(2, getAllResult.Value.Count);
+        Assert.Single(getAllResult.Value);
 
         Assert.Contains(getAllResult.Value, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
+    }
+
+    [Fact]
+    public async Task Invalid_Create_EmptyTitle_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand(string.Empty));
+
+        Assert.True(createListResult.IsFailed);
+
+        var getAllResult = await fixture.SendAsync(new GetTaskListsQuery());
+
+        Assert.True(getAllResult.IsSuccess);
+        Assert.Empty(getAllResult.Value);
+    }
+
+    [Fact]
+    public async Task Invalid_Get_MissingTaskList_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var missingId = Guid.NewGuid();
+        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(missingId));
+
+        Assert.True(getResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task Invalid_Create_TitleTooLong_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var tooLongTitle = new string('a', 101);
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand(tooLongTitle));
+
+        Assert.True(createListResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task GetAll_WithMultipleLists_ShouldReturnAll()
+    {
+        await fixture.ResetAsync();
+
+        var firstResult = await fixture.SendAsync(new CreateTaskListCommand("First List"));
+        var secondResult = await fixture.SendAsync(new CreateTaskListCommand("Second List"));
+
+        Assert.True(firstResult.IsSuccess);
+        Assert.True(secondResult.IsSuccess);
+
+        var getAllResult = await fixture.SendAsync(new GetTaskListsQuery());
+
+        Assert.True(getAllResult.IsSuccess);
+        Assert.Equal(2, getAllResult.Value.Count);
+        Assert.Contains(getAllResult.Value, list => list.Id == firstResult.Value.Id);
+        Assert.Contains(getAllResult.Value, list => list.Id == secondResult.Value.Id);
     }
 }
