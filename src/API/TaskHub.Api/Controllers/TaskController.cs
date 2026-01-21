@@ -56,5 +56,19 @@ namespace TaskHub.Api.Controllers
             var result = await _mediator.Send(new UpdateTaskItemStatusCommand(taskItemId, request.Status), ct);
             return result.IsFailed ? BadRequest(result.Errors) : Ok();
         }
+
+        [HttpPut("list/{taskListId:guid}")]
+        public async Task<ActionResult<TaskListResponse>> UpdateTaskList(Guid taskListId, [FromBody] UpdateTaskListRequest request, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new UpdateTaskListCommand(taskListId, request.Title), ct);
+            return result.IsFailed ? BadRequest(result.Errors) : Ok(result.Value);
+        }
+
+        [HttpDelete("list/{taskListId:guid}")]
+        public async Task<IActionResult> DeleteTaskList(Guid taskListId, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new DeleteTaskListCommand(taskListId), ct);
+            return result.IsFailed ? BadRequest(result.Errors) : Ok();
+        }
     }
 }

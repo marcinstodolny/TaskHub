@@ -46,7 +46,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
     }
 
     [Fact]
-    public async Task Invalid_Create_EmptyTitle_ShouldReturnFailure()
+    public async Task Create_Invalid_InvalidTitle_ShouldReturnFailure()
     {
         await fixture.ResetAsync();
 
@@ -65,19 +65,18 @@ public class TaskListTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var missingId = Guid.NewGuid();
-        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(missingId));
+        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(Guid.NewGuid()));
 
         Assert.True(getResult.IsFailed);
     }
 
-    [Fact]
-    public async Task Invalid_Create_TitleTooLong_ShouldReturnFailure()
+    [Theory]
+    [MemberData(nameof(InvalidTitleData))]
+    public async Task Create_Invalid_TitleTooLong_ShouldReturnFailure(string? invalidTitle)
     {
         await fixture.ResetAsync();
 
-        var tooLongTitle = new string('a', 101);
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand(tooLongTitle));
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand(invalidTitle));
 
         Assert.True(createListResult.IsFailed);
     }
@@ -100,4 +99,87 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.Contains(getAllResult.Value, list => list.Id == firstResult.Value.Id);
         Assert.Contains(getAllResult.Value, list => list.Id == secondResult.Value.Id);
     }
+
+    [Fact]
+    public async Task Update_Valid_ShouldUpdateTitle()
+    {
+        await fixture.ResetAsync();
+
+        var createResult = await fixture.SendAsync(new CreateTaskListCommand("Initial Title"));
+
+        var updateResult = await fixture.SendAsync(new UpdateTaskListCommand(createResult.Value.Id, "Updated Title"));
+
+        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(createResult.Value.Id));
+
+        Assert.True(updateResult.IsSuccess);
+        Assert.Equal("Updated Title", updateResult.Value.Title);
+        Assert.True(getResult.IsSuccess);
+        Assert.Equal("Updated Title", getResult.Value.Title);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidTitleData))]
+    public async Task Update_InvalidTitle_ShouldReturnFailure(string? invalidTitle)
+    {
+        await fixture.ResetAsync();
+
+        var createResult = await fixture.SendAsync(new CreateTaskListCommand("Initial Title"));
+
+        var updateResult = await fixture.SendAsync(new UpdateTaskListCommand(createResult.Value.Id, invalidTitle));
+
+        Assert.True(updateResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task Update_MissingTaskList_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var updateResult = await fixture.SendAsync(new UpdateTaskListCommand(Guid.NewGuid(), "Updated Title"));
+
+        Assert.True(updateResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task Update_EmptyTaskListId_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var updateResult = await fixture.SendAsync(new UpdateTaskListCommand(Guid.Empty, "Updated Title"));
+
+        Assert.True(updateResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task Delete_MissingTaskList_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var deleteResult = await fixture.SendAsync(new DeleteTaskListCommand(Guid.NewGuid()));
+
+        Assert.True(deleteResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task Delete_ExistingTaskList_ShouldRemoveAndNotFoundOnGet()
+    {
+        await fixture.ResetAsync();
+
+        var createResult = await fixture.SendAsync(new CreateTaskListCommand("To Delete"));
+
+        var deleteResult = await fixture.SendAsync(new DeleteTaskListCommand(createResult.Value.Id));
+
+        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(createResult.Value.Id));
+
+        Assert.True(deleteResult.IsSuccess);
+        Assert.True(getResult.IsFailed);
+    }
+
+    public static IEnumerable<object[]?> InvalidTitleData =>
+        new List<object[]?>
+        {
+            new object[] { new string('a', 101) },
+            new object[] { string.Empty },
+            new object[] { null },
+        };
 }
