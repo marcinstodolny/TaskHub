@@ -1,11 +1,12 @@
 # TaskHub
 
-TaskHub is a sample .NET solution showcasing **CQRS**, **DDD-style layering**, **Dockerized infrastructure**, and **integration testing** against a real SQL Server database.
+TaskHub is a sample .NET solution showcasing **CQRS**, **DDD-style layering**, **Dockerized infrastructure**, **hybrid EF Core/Dapper data access**, and **integration testing** against a real SQL Server database.
 
 ## What it demonstrates
 
 - CQRS with MediatR (commands/queries)
 - Layered structure (Domain / Application / Infrastructure)
+- Hybrid persistence (EF Core for writes, Dapper for read projections)
 - Local environment via Docker Compose (SQL Server + app)
 - Integration tests using Testcontainers (optionally with Respawn for DB cleanup)
 
@@ -14,6 +15,7 @@ TaskHub is a sample .NET solution showcasing **CQRS**, **DDD-style layering**, *
 - .NET 10
 - ASP.NET Core
 - Entity Framework Core
+- Dapper (query/read projections)
 - MediatR (CQRS)
 - SQL Server (Docker)
 - xUnit + Testcontainers (integration tests)
@@ -82,6 +84,6 @@ test/
 
 ## Roadmap
 
-- Add more integration tests for commands/queries
-- Add API contract tests
-- Expand README with API examples
+- Expand API surface (endpoints, commands, queries)
+- Additional integration tests and API contract tests
+- Explore WPF or Blazor client UI (longer term)
