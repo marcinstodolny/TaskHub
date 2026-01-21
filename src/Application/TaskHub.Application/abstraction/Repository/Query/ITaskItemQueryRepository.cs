@@ -1,9 +1,9 @@
-﻿using TaskHub.Domain.Entities;
+﻿using TaskHub.Application.Response;
 
 namespace TaskHub.Application.abstraction.Repository.Query
 {
     public interface ITaskItemQueryRepository
     {
-        Task<TaskItem?> GetByIdAsync(Guid taskId, CancellationToken ct); //TODO responses
+        Task<TaskItemResponse?> GetByIdAsync(Guid taskId, CancellationToken ct);
     }
 }

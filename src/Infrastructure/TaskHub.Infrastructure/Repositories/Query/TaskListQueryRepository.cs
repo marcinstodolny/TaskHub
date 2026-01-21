@@ -1,41 +1,140 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Dapper;
+using Microsoft.EntityFrameworkCore;
+using System.Net.NetworkInformation;
 using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Application.Response;
-using TaskHub.Domain.Entities;
+using TaskHub.Domain.ValueObjects;
 using TaskHub.Infrastructure.Persistence;
+using static Dapper.SqlMapper;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace TaskHub.Infrastructure.Repositories.Query
 {
     internal sealed class TaskListQueryRepository(TaskHubDbContext db) : ITaskListQueryRepository
     {
-        public async Task<List<TaskListResponse>> GetAllAsync(CancellationToken ct = default) //TODO Dapper
+        public async Task<List<TaskListResponse>> GetAllAsync(CancellationToken ct = default)
         {
-            return (await db.Set<TaskList>().Include(taskList => taskList.Tasks).ToListAsync(cancellationToken: ct)).Select(t => new TaskListResponse
+            var connection = db.Database.GetDbConnection();
+
+            const string sql = """
+                               SELECT 
+                                   tl.Id,
+                                   tl.Title
+                               FROM task_lists tl
+                               ORDER BY tl.Title;
+
+                               SELECT
+                                   ti.Id,
+                                   ti.TaskListId,
+                                   ti.Title,
+                                   ti.Description,
+                                   ti.Priority,
+                                   ti.Status
+                               FROM task_items ti
+                               ORDER BY ti.TaskListId, ti.Id;
+                               """;
+
+            var command = new CommandDefinition(sql, cancellationToken: ct);
+            await using var gridReader = await connection.QueryMultipleAsync(command);
+
+            var taskLists = (await gridReader.ReadAsync<TaskListResponse>()).ToList();
+            var taskItems = (await gridReader.ReadAsync<TaskItemResponse>()).ToList();
+
+            var taskListsById = taskLists.ToDictionary(list => list.Id);
+
+            foreach (var taskItem in taskItems)
             {
-                Title = t.Title.Value, Id = t.Id,
-                Tasks = t.Tasks.Select(task => new TaskItemResponse { Id = task.Id, Title = task.Title.Value }).ToList()
-            }).ToList();
+                if (taskListsById.TryGetValue(taskItem.TaskListId, out var taskList))
+                    taskList.Tasks.Add(taskItem);
+            }
+
+            return taskLists;
         }
 
-        public async Task<TaskListResponse?> GetByIdAsync(Guid id, CancellationToken ct = default) //TODO Dapper
+        public async Task<TaskListResponse?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            var list = await db.Set<TaskList>().Include(taskList => taskList.Tasks).FirstOrDefaultAsync(t => t.Id == id, ct);
-            return list is null ? null : new TaskListResponse 
-            {
-                Id = list.Id, Title = list.Title.Value,
-                Tasks = list.Tasks.Select(task => new TaskItemResponse { Id = task.Id, Title = task.Title.Value })
-                    .ToList()
-            };
+            var connection = db.Database.GetDbConnection();
+
+            const string sql = """
+                               SELECT TOP (1)
+                                   tl.Id,
+                                   tl.Title
+                               FROM task_lists tl
+                               WHERE tl.Id = @Id
+                               ORDER BY tl.Id;
+
+                               SELECT
+                                   ti.Id,
+                                   ti.TaskListId,
+                                   ti.Title,
+                                   ti.Description,
+                                   ti.Priority,
+                                   ti.Status
+                               FROM task_items ti
+                               WHERE ti.TaskListId = (
+                                   SELECT TOP (1) tl.Id
+                                   FROM task_lists tl
+                                   WHERE tl.Id = @Id
+                                   ORDER BY tl.Id
+                               )
+                               ORDER BY ti.Id;
+                               """;
+
+            var command = new CommandDefinition(sql, new { Id = id }, cancellationToken: ct);
+
+            await using var gridReader = await connection.QueryMultipleAsync(command);
+
+            var taskList = await gridReader.ReadSingleOrDefaultAsync<TaskListResponse>();
+            if (taskList is null)
+                return null;
+
+            var taskItems = (await gridReader.ReadAsync<TaskItemResponse>()).ToList();
+            taskList.Tasks.AddRange(taskItems);
+
+            return taskList;
         }
 
-        public async Task<TaskListResponse?> GetByTitleAsync(string title, CancellationToken ct = default) //TODO Dapper
+        public async Task<TaskListResponse?> GetByTitleAsync(string title, CancellationToken ct = default)
         {
-            var list = await db.Set<TaskList>().Include(taskList => taskList.Tasks).FirstOrDefaultAsync(t => t.Title.Value == title, ct);
-            return list is null ? null : new TaskListResponse 
-            {
-                Id = list.Id, Title = list.Title.Value,
-                Tasks = list.Tasks.Select(task => new TaskItemResponse{ Id = task.Id, Title = task.Title.Value }).ToList()
-            };
+            var connection = db.Database.GetDbConnection();
+
+            const string sql = """
+                               SELECT TOP (1)
+                                   tl.Id,
+                                   tl.Title
+                               FROM task_lists tl
+                               WHERE tl.Title = @Title
+                               ORDER BY tl.Id;
+
+                               SELECT
+                                   ti.Id,
+                                   ti.TaskListId,
+                                   ti.Title,
+                                   ti.Description,
+                                   ti.Priority,
+                                   ti.Status
+                               FROM task_items ti
+                               WHERE ti.TaskListId = (
+                                   SELECT TOP (1) tl.Id
+                                   FROM task_lists tl
+                                   WHERE tl.Title = @Title
+                                   ORDER BY tl.Id
+                               )
+                               ORDER BY ti.Id;
+                               """;
+
+            var command = new CommandDefinition(sql, new { Title = title }, cancellationToken: ct);
+
+            await using var gridReader = await connection.QueryMultipleAsync(command);
+
+            var taskList = await gridReader.ReadSingleOrDefaultAsync<TaskListResponse>();
+            if (taskList is null)
+                return null;
+
+            var taskItems = (await gridReader.ReadAsync<TaskItemResponse>()).ToList();
+            taskList.Tasks.AddRange(taskItems);
+
+            return taskList;
         }
     }
 }
