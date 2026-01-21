@@ -12,7 +12,7 @@ services:
       - "8080:8080"
       - "8081:8081"
     volumes:
-      - ${USER_SECRETS_PATH}:/home/app/.microsoft/usersecrets:ro
-      - ${USER_SECRETS_PATH}:/root/.microsoft/usersecrets:ro
-      - ${HTTPS_CERTS_PATH}:/home/app/.aspnet/https:ro
-      - ${HTTPS_CERTS_PATH}:/root/.aspnet/https:ro
+      - ${USER_SECRETS_PATH:-./.docker/usersecrets}:/home/app/.microsoft/usersecrets:ro
+      - ${USER_SECRETS_PATH:-./.docker/usersecrets}:/root/.microsoft/usersecrets:ro
+      - ${HTTPS_CERTS_PATH:-./.docker/https}:/home/app/.aspnet/https:ro
+      - ${HTTPS_CERTS_PATH:-./.docker/https}:/root/.aspnet/https:ro
