@@ -1,15 +1,37 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Dapper;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
 using TaskHub.Application.abstraction.Repository.Query;
-using TaskHub.Domain.Entities;
+using TaskHub.Application.Response;
 using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Repositories.Query
 {
     internal sealed class TaskItemQueryRepository(TaskHubDbContext db) : ITaskItemQueryRepository
     {
-        public async Task<TaskItem?> GetByIdAsync(Guid id, CancellationToken ct = default)  //TODO Dapper
+        public async Task<TaskItemResponse?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            return await db.Set<TaskItem>().FirstOrDefaultAsync(t => t.Id == id, ct);
+            var connection = db.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open)
+            {
+                await connection.OpenAsync(ct);
+            }
+
+            const string sql = """
+                               SELECT 
+                                   Id,
+                                   TaskListId,
+                                   Title,
+                                   Description,
+                                   Priority,
+                                   Status
+                               FROM task_items
+                               WHERE Id = @Id;
+                               """;
+
+
+            var command = new CommandDefinition(sql, new { Id = id }, cancellationToken: ct);
+            return await connection.QuerySingleOrDefaultAsync<TaskItemResponse>(command);
         }
     }
 }
