@@ -46,6 +46,20 @@ namespace TaskHub.Domain.Entities
             return Result.Ok();
         }
 
+        public Result Update(Title title, TaskDescription? description, TaskPriority priority, DateTime nowUtc)
+        {
+            if (string.IsNullOrWhiteSpace(title?.Value))
+                return Result.Fail("Title is required.");
+
+            Title = title;
+            Description = description;
+            Priority = priority;
+            UpdatedAt = nowUtc;
+
+            Raise(new TaskUpdated(Id));
+            return Result.Ok();
+        }
+
         public Result Start(DateTime nowUtc)
         {
             switch (Status)
