@@ -34,7 +34,7 @@ namespace TaskHub.Api.Controllers
             return taskListsResult.IsFailed ? NotFound(taskListsResult.Errors) : Ok(taskListsResult.Value);
         }
 
-        [HttpPost("list")]
+        [HttpPost("taskList")]
         public async Task<ActionResult<TaskListResponse>> CreateTaskList(CreateTaskListCommand command, CancellationToken ct)
         {
             var taskListResult = await _mediator.Send(command, ct);
@@ -42,7 +42,21 @@ namespace TaskHub.Api.Controllers
             return taskListResult.IsFailed ? BadRequest(taskListResult.Errors) : Ok(taskListResult.Value);
         }
 
-        [HttpPost("item")]
+        [HttpPut("taskList/{taskListId:guid}")]
+        public async Task<ActionResult<TaskListResponse>> UpdateTaskList(Guid taskListId, [FromBody] UpdateTaskListRequest request, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new UpdateTaskListCommand(taskListId, request.Title), ct);
+            return result.IsFailed ? BadRequest(result.Errors) : Ok(result.Value);
+        }
+
+        [HttpDelete("taskList/{taskListId:guid}")]
+        public async Task<IActionResult> DeleteTaskList(Guid taskListId, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new DeleteTaskListCommand(taskListId), ct);
+            return result.IsFailed ? BadRequest(result.Errors) : Ok();
+        }
+
+        [HttpPost("taskItem")]
         public async Task<ActionResult<Guid>> CreateTaskItem(CreateTaskItemCommand command, CancellationToken ct)
         {
             var task = await _mediator.Send(command, ct);
@@ -54,6 +68,20 @@ namespace TaskHub.Api.Controllers
         public async Task<IActionResult> UpdateTaskStatus(Guid taskItemId, [FromBody] UpdateTaskStatusRequest request, CancellationToken ct)
         {
             var result = await _mediator.Send(new UpdateTaskItemStatusCommand(taskItemId, request.Status), ct);
+            return result.IsFailed ? BadRequest(result.Errors) : Ok();
+        }
+
+        [HttpPut("item/{taskItemId:guid}")]
+        public async Task<ActionResult<TaskItemResponse>> UpdateTaskItem(Guid taskItemId, [FromBody] UpdateTaskItemRequest request, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new UpdateTaskItemCommand(taskItemId, request.Title, request.Description, request.Priority), ct);
+            return result.IsFailed ? BadRequest(result.Errors) : Ok(result.Value);
+        }
+
+        [HttpDelete("item/{taskItemId:guid}")]
+        public async Task<IActionResult> DeleteTaskItem(Guid taskItemId, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new DeleteTaskItemCommand(taskItemId), ct);
             return result.IsFailed ? BadRequest(result.Errors) : Ok();
         }
     }

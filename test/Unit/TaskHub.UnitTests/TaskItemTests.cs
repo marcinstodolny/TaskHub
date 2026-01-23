@@ -118,5 +118,31 @@ namespace TaskHub.UnitTests
             Assert.True(result.IsFailed);
         }
 
+        [Fact]
+        public void UpdateDetails_UpdatesFieldsAndRaisesEvent()
+        {
+            // Arrange
+            var title = Title.Create("Manual Testing").Value;
+            var task = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal).Value;
+            var newTitle = Title.Create("Updated title").Value;
+            var newDescription = TaskDescription.Create("Updated description").Value;
+            var now = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            // Act
+            var result = task.Update(newTitle, newDescription, TaskPriority.High, now);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(newTitle, task.Title);
+            Assert.Equal(newDescription, task.Description);
+            Assert.Equal(TaskPriority.High, task.Priority);
+            Assert.Equal(now, task.UpdatedAt);
+
+            var last = task.DomainEvents[^1];
+            var ev = Assert.IsType<TaskUpdated>(last);
+            Assert.Equal(task.Id, ev.TaskId);
+        }
+
+
     }
 }
