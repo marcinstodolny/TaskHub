@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TaskHub.Domain.Entities;
+using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Infrastructure.Persistence.Configurations
 {
@@ -19,12 +20,12 @@ namespace TaskHub.Infrastructure.Persistence.Configurations
 
             builder.OwnsOne(x => x.Title, tb =>
             {
-                tb.Property(p => p.Value).HasColumnName("Title").HasMaxLength(200).IsRequired();
+                tb.Property(p => p.Value).HasColumnName("Title").HasMaxLength(TaskItemTitle.MaxLength).IsRequired();
             });
 
             builder.OwnsOne(x => x.Description, db =>
             {
-                db.Property(p => p.Value).HasColumnName("Description").HasMaxLength(2000);
+                db.Property(p => p.Value).HasColumnName("Description").HasMaxLength(TaskDescription.MaxLength);
             });
 
             builder.HasIndex(x => new { x.TaskListId, x.Status });

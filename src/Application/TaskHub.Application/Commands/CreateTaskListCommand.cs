@@ -15,7 +15,7 @@ namespace TaskHub.Application.Commands
     {
         public async Task<Result<TaskListResponse>> Handle(CreateTaskListCommand request, CancellationToken ct)
         {
-            var titleResult = Title.Create(request.Title);
+            var titleResult = TaskListTitle.Create(request.Title);
             if (titleResult.IsFailed)
             {
                 return Result.Fail(titleResult.Errors);
@@ -37,7 +37,7 @@ namespace TaskHub.Application.Commands
     {
         public CreateTaskListCommandValidator()
         {
-            RuleFor(x => x.Title).NotEmpty().MaximumLength(100);
+            RuleFor(x => x.Title).NotEmpty().MaximumLength(TaskListTitle.MaxLength);
         }
     }
 }

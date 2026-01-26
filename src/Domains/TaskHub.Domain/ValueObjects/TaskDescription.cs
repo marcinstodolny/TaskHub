@@ -4,7 +4,7 @@ namespace TaskHub.Domain.ValueObjects
 {
     public class TaskDescription(string value)
     {
-        private const int MaxLength = 1000;
+        public const int MaxLength = 2000;
         public string Value { get; private set; } = value;
 
         public static Result<TaskDescription> Create(string? value)
@@ -14,10 +14,7 @@ namespace TaskHub.Domain.ValueObjects
 
             var trimmed = value.Trim();
 
-            if (trimmed.Length > MaxLength)
-                return Result.Fail<TaskDescription>($"Description cannot exceed {MaxLength} characters.");
-
-            return Result.Ok(new TaskDescription(trimmed));
+            return trimmed.Length > MaxLength ? Result.Fail<TaskDescription>($"Description cannot exceed {MaxLength} characters.") : Result.Ok(new TaskDescription(trimmed));
         }
     }
 }

@@ -12,14 +12,14 @@ namespace TaskHub.UnitTests
         private readonly TaskItem _taskItem;
         public TaskItemTests()
         {
-            _taskItem = TaskItem.Create(Guid.NewGuid(), Title.Create("Test task").Value, null, TaskPriority.Normal).Value;
+            _taskItem = TaskItem.Create(Guid.NewGuid(), TaskItemTitle.Create("Test task").Value, null, TaskPriority.Normal).Value;
         }
 
         [Fact]
         public void Create_SetsDefaults_AndRaisesEvent()
         {
             // Arrange
-            var title = Title.Create("Manual Testing").Value;
+            var title = TaskItemTitle.Create("Manual Testing").Value;
             // Act
             var result = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal);
 
@@ -34,7 +34,7 @@ namespace TaskHub.UnitTests
         public void Create_Fails_If_Title_Is_Null()
         {
             // Arrange
-            Title? title = null;
+            TaskItemTitle? title = null;
 
             // Act
             var result = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal);
@@ -89,10 +89,10 @@ namespace TaskHub.UnitTests
         public void UpdateTitle_UpdatingTitle_AndRaisesEvent()
         {
             // Arrange
-            var title = Title.Create("Manual Testing").Value;
+            var title = TaskItemTitle.Create("Manual Testing").Value;
             var task = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal).Value;
 
-            var newTitle = Title.Create("Different title").Value;
+            var newTitle = TaskItemTitle.Create("Different title").Value;
 
             // Act
             var result = task.UpdateTitle(newTitle);
@@ -122,9 +122,9 @@ namespace TaskHub.UnitTests
         public void UpdateDetails_UpdatesFieldsAndRaisesEvent()
         {
             // Arrange
-            var title = Title.Create("Manual Testing").Value;
+            var title = TaskItemTitle.Create("Manual Testing").Value;
             var task = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal).Value;
-            var newTitle = Title.Create("Updated title").Value;
+            var newTitle = TaskItemTitle.Create("Updated title").Value;
             var newDescription = TaskDescription.Create("Updated description").Value;
             var now = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 

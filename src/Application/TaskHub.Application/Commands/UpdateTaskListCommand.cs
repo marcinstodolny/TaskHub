@@ -23,7 +23,7 @@ public sealed class UpdateTaskListCommandHandler(
             return Result.Fail(getResult.Errors);
         }
 
-        var titleResult = Title.Create(request.Title);
+        var titleResult = TaskListTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
             return Result.Fail(titleResult.Errors);
@@ -47,6 +47,6 @@ public sealed class UpdateTaskListCommandValidator : AbstractValidator<UpdateTas
     public UpdateTaskListCommandValidator()
     {
         RuleFor(x => x.TaskListId).NotEmpty();
-        RuleFor(x => x.Title).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Title).NotEmpty().MaximumLength(TaskListTitle.MaxLength);
     }
 }

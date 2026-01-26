@@ -33,7 +33,7 @@ namespace TaskHub.UnitTests
         [Fact]
         public void Create_TooLong_ShouldFail()
         {
-            var longText = new string('x', 1001);
+            var longText = new string('x', TaskDescription.MaxLength + 1);
 
             var result = TaskDescription.Create(longText);
 

@@ -24,7 +24,7 @@ public sealed class UpdateTaskItemStatusCommandHandler(
         }
 
         var task = getResult.Value;
-        Result updateResult = request.Status switch
+        var updateResult = request.Status switch
         {
             TaskStatus.InProgress => task.Start(dateTimeProvider.UtcNow()),
             TaskStatus.Done => task.Complete(dateTimeProvider.UtcNow()),

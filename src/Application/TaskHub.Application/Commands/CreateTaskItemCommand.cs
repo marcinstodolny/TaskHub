@@ -9,7 +9,7 @@ using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Commands
 {
-    public sealed record CreateTaskItemCommand(Guid TaskListId, string Title, string? Description, DateTime? DueDateUtc, TaskPriority Priority) : IRequest<Result<Guid>>;
+    public sealed record CreateTaskItemCommand(Guid TaskListId, string Title, string? Description, TaskPriority Priority) : IRequest<Result<Guid>>;
 
     public sealed class CreateTaskItemHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository, ITaskItemCommandRepository taskItemCommandRepository) : IRequestHandler<CreateTaskItemCommand, Result<Guid>>
     {
@@ -21,7 +21,7 @@ namespace TaskHub.Application.Commands
                 return Result.Fail(getResult.Errors);
             }
 
-            var titleResult = Title.Create(request.Title);
+            var titleResult = TaskItemTitle.Create(request.Title);
             if (titleResult.IsFailed)
             {
                 return Result.Fail(titleResult.Errors);
@@ -50,8 +50,8 @@ namespace TaskHub.Application.Commands
         public CreateTaskItemCommandValidator()
         {
             RuleFor(x => x.TaskListId).NotEmpty();
-            RuleFor(x => x.Title).NotEmpty().MaximumLength(100);
-            RuleFor(x => x.Description).MaximumLength(1000).When(x => x.Description is not null);
+            RuleFor(x => x.Title).NotEmpty().MaximumLength(TaskItemTitle.MaxLength);
+            RuleFor(x => x.Description).MaximumLength(TaskDescription.MaxLength).When(x => x.Description is not null);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using TaskHub.Application.Commands;
 using TaskHub.Application.Queries;
 using TaskHub.Domain.Enums;
+using TaskHub.Domain.ValueObjects;
 using TaskHub.IntegrationTests.Infrastructure;
 using Xunit;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
@@ -21,7 +22,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsSuccess);
@@ -36,7 +36,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             Guid.NewGuid(),
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsFailed);
@@ -53,7 +52,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             string.Empty,
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsFailed);
@@ -65,13 +63,12 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         await fixture.ResetAsync();
 
         var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for long description"));
-        var tooLongDescription = new string('a', 1001);
+        var tooLongDescription = new string('a', TaskDescription.MaxLength + 1);
 
         var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
             createListResult.Value.Id,
             "Task Item",
             tooLongDescription,
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsFailed);
@@ -97,7 +94,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         var updateResult = await fixture.SendAsync(new UpdateTaskItemStatusCommand(createItemResult.Value, TaskStatus.Todo));
@@ -115,7 +111,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Original title",
             "Original description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         var updateResult = await fixture.SendAsync(new UpdateTaskItemCommand(
@@ -160,10 +155,9 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Original title",
             "Original description",
-            DateTime.Now,
             TaskPriority.Normal));
 
-        var tooLongTitle = new string('a', 101);
+        var tooLongTitle = new string('a', TaskItemTitle.MaxLength + 1);
         var updateResult = await fixture.SendAsync(new UpdateTaskItemCommand(
             createItemResult.Value,
             tooLongTitle,
@@ -183,10 +177,9 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Original title",
             "Original description",
-            DateTime.Now,
             TaskPriority.Normal));
 
-        var tooLongDescription = new string('a', 1001);
+        var tooLongDescription = new string('a', TaskDescription.MaxLength + 1);
         var updateResult = await fixture.SendAsync(new UpdateTaskItemCommand(
             createItemResult.Value,
             "Updated title",
@@ -216,7 +209,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         var deleteResult = await fixture.SendAsync(new DeleteTaskItemCommand(createItemResult.Value));
