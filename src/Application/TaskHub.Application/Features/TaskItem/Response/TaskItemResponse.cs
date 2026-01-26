@@ -1,7 +1,7 @@
 ﻿using TaskHub.Domain.Enums;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
-namespace TaskHub.Application.Response
+namespace TaskHub.Application.Features.TaskItem.Response
 {
     public sealed record TaskItemResponse()
     {
@@ -13,7 +13,7 @@ namespace TaskHub.Application.Response
         public TaskStatus Status { get; set; }
     };
 
-    public sealed record TaskItemRow()
+    public sealed record TaskItemLightResponse()
     {
         public Guid Id { get; set; }
         public string Title { get; set; }

@@ -3,11 +3,10 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Domain.Entities;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 
-namespace TaskHub.Application.Commands
+namespace TaskHub.Application.Features.TaskItem.Commands
 {
     public sealed record CreateTaskItemCommand(Guid TaskListId, string Title, string? Description, TaskPriority Priority) : IRequest<Result<Guid>>;
 
@@ -32,7 +31,7 @@ namespace TaskHub.Application.Commands
                 return Result.Fail(descriptionResult.Errors);
             }
 
-            var createResult = TaskItem.Create(request.TaskListId, titleResult.Value, descriptionResult?.Value, request.Priority);
+            var createResult = Domain.Entities.TaskItem.Create(request.TaskListId, titleResult.Value, descriptionResult?.Value, request.Priority);
             if (createResult.IsFailed)
             {
                 return Result.Fail(createResult.Errors);

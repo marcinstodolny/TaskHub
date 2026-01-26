@@ -1,5 +1,6 @@
-﻿using TaskHub.Application.Commands;
-using TaskHub.Application.Queries;
+﻿using TaskHub.Application.Features.TaskItem.Commands;
+using TaskHub.Application.Features.TaskList.Commands;
+using TaskHub.Application.Features.TaskList.Queries;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 using TaskHub.IntegrationTests.Infrastructure;

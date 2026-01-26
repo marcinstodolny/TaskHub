@@ -3,10 +3,10 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.Response;
+using TaskHub.Application.Features.TaskList.Response;
 using TaskHub.Domain.ValueObjects;
 
-namespace TaskHub.Application.Commands;
+namespace TaskHub.Application.Features.TaskList.Commands;
 
 public sealed record UpdateTaskListCommand(Guid TaskListId, string Title) : IRequest<Result<TaskListResponse>>;
 

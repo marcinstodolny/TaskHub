@@ -1,4 +1,4 @@
-﻿using TaskHub.Application.Response;
+﻿using TaskHub.Application.Features.TaskList.Response;
 using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.abstraction.Repository.Query

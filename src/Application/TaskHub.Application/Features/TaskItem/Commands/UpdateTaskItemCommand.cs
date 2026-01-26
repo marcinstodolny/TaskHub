@@ -3,11 +3,11 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.Response;
+using TaskHub.Application.Features.TaskItem.Response;
 using TaskHub.Domain.ValueObjects;
 using TaskPriority = TaskHub.Domain.Enums.TaskPriority;
 
-namespace TaskHub.Application.Commands;
+namespace TaskHub.Application.Features.TaskItem.Commands;
 
 public sealed record UpdateTaskItemCommand(
     Guid TaskItemId,

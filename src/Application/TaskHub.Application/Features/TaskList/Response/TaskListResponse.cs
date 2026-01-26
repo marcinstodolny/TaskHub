@@ -1,4 +1,6 @@
-﻿namespace TaskHub.Application.Response
+﻿using TaskHub.Application.Features.TaskItem.Response;
+
+namespace TaskHub.Application.Features.TaskList.Response
 {
     public sealed record TaskListResponse()
     {

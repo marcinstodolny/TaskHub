@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TaskHub.Domain.ValueObjects;
 
-namespace TaskHub.Application.Requests
+namespace TaskHub.Application.Features.TaskList.Request
 {
     public sealed record CreateTaskListRequest()
     {
-        [Required, StringLength(100)]
+        [Required, StringLength(TaskListTitle.MaxLength)]
         public string Title { get; set; }
     };
     

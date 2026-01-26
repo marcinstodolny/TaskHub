@@ -4,7 +4,7 @@ using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
 
-namespace TaskHub.Application.Commands;
+namespace TaskHub.Application.Features.TaskItem.Commands;
 
 public sealed record DeleteTaskItemCommand(Guid TaskItemId) : IRequest<Result>;
 

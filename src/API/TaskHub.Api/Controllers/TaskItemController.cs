@@ -1,8 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using TaskHub.Application.Commands;
-using TaskHub.Application.Requests;
-using TaskHub.Application.Response;
+using TaskHub.Application.Features.TaskItem.Commands;
+using TaskHub.Application.Features.TaskItem.Request;
+using TaskHub.Application.Features.TaskItem.Response;
 
 namespace TaskHub.Api.Controllers
 {
