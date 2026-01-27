@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TaskHub.Application.Features.TaskItem.Commands;
+using TaskHub.Application.Features.TaskItem.Queries;
 using TaskHub.Application.Features.TaskItem.Request;
 using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Application.Response;
 
 namespace TaskHub.Api.Controllers
 {
@@ -10,6 +12,22 @@ namespace TaskHub.Api.Controllers
     [Route("api/[controller]")]
     public class TaskItemController(IMediator mediator) : ControllerBase
     {
+        [HttpGet("{taskItemId:guid}")]
+        public async Task<ActionResult<TaskItemResponse>> GetTaskItemById(Guid taskItemId, CancellationToken ct)
+        {
+            var taskItemResult = await mediator.Send(new GetTaskItemByIdQuery(taskItemId), ct);
+
+            return taskItemResult.IsFailed ? NotFound(taskItemResult.Errors) : Ok(taskItemResult.Value);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<PaginatedResponse<TaskItemResponse>>> GetTaskItems([FromQuery] GetTaskItemsQuery query, CancellationToken ct)
+        {
+            var taskItemsResult = await mediator.Send(query, ct);
+
+            return taskItemsResult.IsFailed ? NotFound(taskItemsResult.Errors) : Ok(taskItemsResult.Value);
+        }
+
         [HttpPost]
         public async Task<ActionResult<Guid>> CreateTaskItem(CreateTaskItemCommand command, CancellationToken ct)
         {

@@ -1,4 +1,5 @@
-﻿using TaskHub.Domain;
+﻿using System.Net;
+using TaskHub.Domain;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 using Xunit;
@@ -142,7 +143,5 @@ namespace TaskHub.UnitTests
             var ev = Assert.IsType<TaskUpdated>(last);
             Assert.Equal(task.Id, ev.TaskId);
         }
-
-
     }
 }
