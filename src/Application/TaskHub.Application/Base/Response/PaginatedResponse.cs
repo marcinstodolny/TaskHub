@@ -2,7 +2,7 @@
 {
     public sealed record PaginatedResponse<T>
     {
-        public required IReadOnlyCollection<T> Items { get; init; }
+        public IReadOnlyCollection<T> Items { get; init; } = new List<T>();
         public required int CurrentPage { get; init; }
         public required int TotalPageCount { get; init; }
     }

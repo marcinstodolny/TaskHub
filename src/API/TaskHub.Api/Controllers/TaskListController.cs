@@ -4,6 +4,7 @@ using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
 using TaskHub.Application.Features.TaskList.Request;
 using TaskHub.Application.Features.TaskList.Response;
+using TaskHub.Application.Response;
 
 namespace TaskHub.Api.Controllers
 {
@@ -20,9 +21,9 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyCollection<TaskListResponse>>> GetTaskLists(CancellationToken ct)
+        public async Task<ActionResult<PaginatedResponse<TaskListResponse>>> GetTaskLists([FromQuery] GetTaskListsQuery query, CancellationToken ct)
         {
-            var taskListsResult = await mediator.Send(new GetTaskListsQuery(), ct);
+            var taskListsResult = await mediator.Send(query, ct);
 
             return taskListsResult.IsFailed ? NotFound(taskListsResult.Errors) : Ok(taskListsResult.Value);
         }

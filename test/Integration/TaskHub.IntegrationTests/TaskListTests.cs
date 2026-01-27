@@ -42,9 +42,9 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.Equal(2, getResult.Value.Tasks.Count);
 
         Assert.True(getAllResult.IsSuccess);
-        Assert.Single(getAllResult.Value);
+        Assert.Single(getAllResult.Value.Items);
 
-        Assert.Contains(getAllResult.Value, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
+        Assert.Contains(getAllResult.Value.Items, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var getAllResult = await fixture.SendAsync(new GetTaskListsQuery());
 
         Assert.True(getAllResult.IsSuccess);
-        Assert.Empty(getAllResult.Value);
+        Assert.Empty(getAllResult.Value.Items);
     }
 
     [Fact]
@@ -97,9 +97,9 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var getAllResult = await fixture.SendAsync(new GetTaskListsQuery());
 
         Assert.True(getAllResult.IsSuccess);
-        Assert.Equal(2, getAllResult.Value.Count);
-        Assert.Contains(getAllResult.Value, list => list.Id == firstResult.Value.Id);
-        Assert.Contains(getAllResult.Value, list => list.Id == secondResult.Value.Id);
+        Assert.Equal(2, getAllResult.Value.Items.Count);
+        Assert.Contains(getAllResult.Value.Items, list => list.Id == firstResult.Value.Id);
+        Assert.Contains(getAllResult.Value.Items, list => list.Id == secondResult.Value.Id);
     }
 
     [Fact]
