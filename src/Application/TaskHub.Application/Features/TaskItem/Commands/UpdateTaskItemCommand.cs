@@ -3,11 +3,11 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.Response;
+using TaskHub.Application.Features.TaskItem.Response;
 using TaskHub.Domain.ValueObjects;
 using TaskPriority = TaskHub.Domain.Enums.TaskPriority;
 
-namespace TaskHub.Application.Commands;
+namespace TaskHub.Application.Features.TaskItem.Commands;
 
 public sealed record UpdateTaskItemCommand(
     Guid TaskItemId,
@@ -29,7 +29,7 @@ public sealed class UpdateTaskItemCommandHandler(
             return Result.Fail(getResult.Errors);
         }
 
-        var titleResult = Title.Create(request.Title);
+        var titleResult = TaskItemTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
             return Result.Fail(titleResult.Errors);
@@ -73,11 +73,11 @@ public sealed class UpdateTaskItemCommandValidator : AbstractValidator<UpdateTas
     public UpdateTaskItemCommandValidator()
     {
         RuleFor(x => x.TaskItemId).NotEmpty();
-        RuleFor(x => x.Title).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Title).NotEmpty().MaximumLength(TaskItemTitle.MaxLength);
         RuleFor(x => x.Priority).IsInEnum();
         When(x => x.Description is not null, () =>
         {
-            RuleFor(x => x.Description).NotEmpty().MaximumLength(1000);
+            RuleFor(x => x.Description).NotEmpty().MaximumLength(TaskDescription.MaxLength);
         });
     }
 }

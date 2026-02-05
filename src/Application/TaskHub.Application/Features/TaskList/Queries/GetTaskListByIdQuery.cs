@@ -2,9 +2,9 @@
 using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction.Repository.Query;
-using TaskHub.Application.Response;
+using TaskHub.Application.Features.TaskList.Response;
 
-namespace TaskHub.Application.Queries
+namespace TaskHub.Application.Features.TaskList.Queries
 {
     public sealed record GetTaskListByIdQuery(Guid TaskListId) : IRequest<Result<TaskListResponse>>;
 

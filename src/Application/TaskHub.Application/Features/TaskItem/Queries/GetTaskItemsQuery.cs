@@ -1,0 +1,33 @@
+﻿using FluentResults;
+using FluentValidation;
+using MediatR;
+using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Application.Response;
+
+namespace TaskHub.Application.Features.TaskItem.Queries;
+
+public sealed record GetTaskItemsQuery(int Page = 1, int Count = 10)
+    : IRequest<Result<PaginatedResponse<TaskItemResponse>>>;
+
+public sealed class GetTaskItemsQueryHandler(ITaskItemQueryRepository taskItemQueryRepository)
+    : IRequestHandler<GetTaskItemsQuery, Result<PaginatedResponse<TaskItemResponse>>>
+{
+    public async Task<Result<PaginatedResponse<TaskItemResponse>>> Handle(GetTaskItemsQuery request, CancellationToken ct)
+    {
+        var items = await taskItemQueryRepository.GetAllAsync(request.Page, request.Count, ct);
+        return items;
+    }
+}
+
+public sealed class GetTaskItemsQueryValidator : AbstractValidator<GetTaskItemsQuery>
+{
+    public GetTaskItemsQueryValidator()
+    {
+        RuleFor(x => x.Page)
+            .GreaterThan(0).WithMessage("Page number must be greater than 0.");
+        RuleFor(x => x.Count)
+            .GreaterThan(0).WithMessage("Count must be greater than 0.")
+            .LessThanOrEqualTo(100).WithMessage("Count must be less than or equal to 100.");
+    }
+}

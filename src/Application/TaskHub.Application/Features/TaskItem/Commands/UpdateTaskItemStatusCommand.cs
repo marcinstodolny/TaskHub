@@ -5,7 +5,7 @@ using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
-namespace TaskHub.Application.Commands;
+namespace TaskHub.Application.Features.TaskItem.Commands;
 
 public sealed record UpdateTaskItemStatusCommand(Guid TaskItemId, TaskStatus Status) : IRequest<Result>;
 
@@ -24,7 +24,7 @@ public sealed class UpdateTaskItemStatusCommandHandler(
         }
 
         var task = getResult.Value;
-        Result updateResult = request.Status switch
+        var updateResult = request.Status switch
         {
             TaskStatus.InProgress => task.Start(dateTimeProvider.UtcNow()),
             TaskStatus.Done => task.Complete(dateTimeProvider.UtcNow()),

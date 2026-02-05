@@ -3,10 +3,10 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.Response;
+using TaskHub.Application.Features.TaskList.Response;
 using TaskHub.Domain.ValueObjects;
 
-namespace TaskHub.Application.Commands;
+namespace TaskHub.Application.Features.TaskList.Commands;
 
 public sealed record UpdateTaskListCommand(Guid TaskListId, string Title) : IRequest<Result<TaskListResponse>>;
 
@@ -23,7 +23,7 @@ public sealed class UpdateTaskListCommandHandler(
             return Result.Fail(getResult.Errors);
         }
 
-        var titleResult = Title.Create(request.Title);
+        var titleResult = TaskListTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
             return Result.Fail(titleResult.Errors);
@@ -47,6 +47,6 @@ public sealed class UpdateTaskListCommandValidator : AbstractValidator<UpdateTas
     public UpdateTaskListCommandValidator()
     {
         RuleFor(x => x.TaskListId).NotEmpty();
-        RuleFor(x => x.Title).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Title).NotEmpty().MaximumLength(TaskListTitle.MaxLength);
     }
 }

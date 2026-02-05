@@ -1,6 +1,13 @@
-﻿using TaskHub.Application.Commands;
-using TaskHub.Application.Queries;
+﻿using System.Net;
+using System.Net.Http.Json;
+using TaskHub.Application.Features.TaskItem.Commands;
+using TaskHub.Application.Features.TaskItem.Queries;
+using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Application.Features.TaskList.Commands;
+using TaskHub.Application.Features.TaskList.Queries;
+using TaskHub.Application.Response;
 using TaskHub.Domain.Enums;
+using TaskHub.Domain.ValueObjects;
 using TaskHub.IntegrationTests.Infrastructure;
 using Xunit;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
@@ -21,7 +28,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsSuccess);
@@ -36,7 +42,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             Guid.NewGuid(),
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsFailed);
@@ -53,7 +58,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             string.Empty,
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsFailed);
@@ -65,13 +69,12 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         await fixture.ResetAsync();
 
         var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for long description"));
-        var tooLongDescription = new string('a', 1001);
+        var tooLongDescription = new string('a', TaskDescription.MaxLength + 1);
 
         var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
             createListResult.Value.Id,
             "Task Item",
             tooLongDescription,
-            DateTime.Now,
             TaskPriority.Normal));
 
         Assert.True(createItemResult.IsFailed);
@@ -97,7 +100,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         var updateResult = await fixture.SendAsync(new UpdateTaskItemStatusCommand(createItemResult.Value, TaskStatus.Todo));
@@ -115,7 +117,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Original title",
             "Original description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         var updateResult = await fixture.SendAsync(new UpdateTaskItemCommand(
@@ -160,10 +161,9 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Original title",
             "Original description",
-            DateTime.Now,
             TaskPriority.Normal));
 
-        var tooLongTitle = new string('a', 101);
+        var tooLongTitle = new string('a', TaskItemTitle.MaxLength + 1);
         var updateResult = await fixture.SendAsync(new UpdateTaskItemCommand(
             createItemResult.Value,
             tooLongTitle,
@@ -183,10 +183,9 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Original title",
             "Original description",
-            DateTime.Now,
             TaskPriority.Normal));
 
-        var tooLongDescription = new string('a', 1001);
+        var tooLongDescription = new string('a', TaskDescription.MaxLength + 1);
         var updateResult = await fixture.SendAsync(new UpdateTaskItemCommand(
             createItemResult.Value,
             "Updated title",
@@ -216,7 +215,6 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             createListResult.Value.Id,
             "Task Item",
             "Description",
-            DateTime.Now,
             TaskPriority.Normal));
 
         var deleteResult = await fixture.SendAsync(new DeleteTaskItemCommand(createItemResult.Value));
@@ -227,4 +225,55 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         Assert.True(getListResult.IsSuccess);
         Assert.DoesNotContain(getListResult.Value.Tasks, task => task.Id == createItemResult.Value);
     }
+
+    [Fact]
+    public async Task GetById_Valid_ShouldReturnTaskItem()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for get item"));
+        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Task Item",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = fixture.ApiFactory.CreateClient();
+
+        var response = await fixture.SendAsync(new GetTaskItemByIdQuery(createItemResult.Value));
+
+        Assert.True(response.IsSuccess);
+        Assert.Equal(createItemResult.Value, response.Value.Id);
+        Assert.Equal(createListResult.Value.Id, response.Value.TaskListId);
+        Assert.Equal("Task Item", response.Value.Title);
+    }
+
+    [Fact]
+    public async Task GetAll_WithMultipleItems_ShouldReturnAll()
+    {
+        await fixture.ResetAsync();
+
+        var firstListResult = await fixture.SendAsync(new CreateTaskListCommand("List A"));
+        var secondListResult = await fixture.SendAsync(new CreateTaskListCommand("List B"));
+
+        var firstItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            firstListResult.Value.Id,
+            "Task Item A",
+            "Description A",
+            TaskPriority.Normal));
+
+        var secondItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            secondListResult.Value.Id,
+            "Task Item B",
+            "Description B",
+            TaskPriority.High));
+
+        var response = await fixture.SendAsync(new GetTaskItemsQuery());
+
+        Assert.True(response.IsSuccess);
+        Assert.Equal(2, response.Value.Items.Count);
+        Assert.Contains(response.Value.Items, list => list.Id == firstItemResult.Value);
+        Assert.Contains(response.Value.Items, list => list.Id == secondItemResult.Value);
+    }
+
 }

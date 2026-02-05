@@ -9,13 +9,13 @@ namespace TaskHub.Domain.Entities
     public class TaskItem : Entity<Guid>
     {
         public Guid TaskListId { get; private set; }
-        public Title Title { get; private set; }
+        public TaskItemTitle Title { get; private set; }
         public TaskDescription? Description { get; private set; }
         public TaskPriority Priority { get; private set; }
         public TaskStatus Status { get; private set; }
 
         public TaskItem() { }
-        private TaskItem(Guid id, Guid taskListId, Title title, TaskDescription? description, TaskPriority priority, TaskStatus status) : base(id)
+        private TaskItem(Guid id, Guid taskListId, TaskItemTitle title, TaskDescription? description, TaskPriority priority, TaskStatus status) : base(id)
         {
             TaskListId = taskListId;
             Title = title;
@@ -24,7 +24,7 @@ namespace TaskHub.Domain.Entities
             Status = status;
         }
 
-        public static Result<TaskItem> Create(Guid taskListId, Title title, TaskDescription? description, TaskPriority priority)
+        public static Result<TaskItem> Create(Guid taskListId, TaskItemTitle title, TaskDescription? description, TaskPriority priority)
         {
             if (string.IsNullOrWhiteSpace(title?.Value))
                 return Result.Fail<TaskItem>("Title is required.");
@@ -35,7 +35,7 @@ namespace TaskHub.Domain.Entities
             return Result.Ok(task);
         }
 
-        public Result UpdateTitle(Title? title)
+        public Result UpdateTitle(TaskItemTitle? title)
         {
             if (string.IsNullOrWhiteSpace(title?.Value))
                 return Result.Fail("Title is required.");
@@ -46,7 +46,7 @@ namespace TaskHub.Domain.Entities
             return Result.Ok();
         }
 
-        public Result Update(Title title, TaskDescription? description, TaskPriority priority, DateTime nowUtc)
+        public Result Update(TaskItemTitle title, TaskDescription? description, TaskPriority priority, DateTime nowUtc)
         {
             if (string.IsNullOrWhiteSpace(title?.Value))
                 return Result.Fail("Title is required.");

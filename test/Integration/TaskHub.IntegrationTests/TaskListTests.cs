@@ -1,7 +1,9 @@
 ﻿using FluentAssertions;
-using TaskHub.Application.Commands;
-using TaskHub.Application.Queries;
+using TaskHub.Application.Features.TaskItem.Commands;
+using TaskHub.Application.Features.TaskList.Commands;
+using TaskHub.Application.Features.TaskList.Queries;
 using TaskHub.Domain.Enums;
+using TaskHub.Domain.ValueObjects;
 using TaskHub.IntegrationTests.Infrastructure;
 using Xunit;
 
@@ -18,11 +20,11 @@ public class TaskListTests(IntegrationTestFixture fixture)
         const string listTitle = "My Task List";
         var createListResult = await fixture.SendAsync(new CreateTaskListCommand(listTitle));
 
-        var createTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createListResult.Value.Id, "First task", "First task description", DateTime.Now, TaskPriority.High));
+        var createTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createListResult.Value.Id, "First task", "First task description", TaskPriority.High));
         
         createTaskItemResult.IsSuccess.Should().BeTrue();
 
-        var secondCreateTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createListResult.Value.Id, "Second Task", "Second task description", DateTime.Now.AddDays(5), TaskPriority.Critical));
+        var secondCreateTaskItemResult = await fixture.SendAsync(new CreateTaskItemCommand(createListResult.Value.Id, "Second Task", "Second task description", TaskPriority.Critical));
 
         var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(createListResult.Value.Id));
 
@@ -40,9 +42,9 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.Equal(2, getResult.Value.Tasks.Count);
 
         Assert.True(getAllResult.IsSuccess);
-        Assert.Single(getAllResult.Value);
+        Assert.Single(getAllResult.Value.Items);
 
-        Assert.Contains(getAllResult.Value, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
+        Assert.Contains(getAllResult.Value.Items, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
     }
 
     [Fact]
@@ -57,7 +59,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var getAllResult = await fixture.SendAsync(new GetTaskListsQuery());
 
         Assert.True(getAllResult.IsSuccess);
-        Assert.Empty(getAllResult.Value);
+        Assert.Empty(getAllResult.Value.Items);
     }
 
     [Fact]
@@ -95,9 +97,9 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var getAllResult = await fixture.SendAsync(new GetTaskListsQuery());
 
         Assert.True(getAllResult.IsSuccess);
-        Assert.Equal(2, getAllResult.Value.Count);
-        Assert.Contains(getAllResult.Value, list => list.Id == firstResult.Value.Id);
-        Assert.Contains(getAllResult.Value, list => list.Id == secondResult.Value.Id);
+        Assert.Equal(2, getAllResult.Value.Items.Count);
+        Assert.Contains(getAllResult.Value.Items, list => list.Id == firstResult.Value.Id);
+        Assert.Contains(getAllResult.Value.Items, list => list.Id == secondResult.Value.Id);
     }
 
     [Fact]
@@ -178,7 +180,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
     public static IEnumerable<object[]?> InvalidTitleData =>
         new List<object[]?>
         {
-            new object[] { new string('a', 101) },
+            new object[] { new string('a', TaskListTitle.MaxLength + 1) },
             new object[] { string.Empty },
             new object[] { null },
         };
