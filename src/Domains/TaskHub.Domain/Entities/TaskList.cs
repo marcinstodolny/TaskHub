@@ -1,5 +1,5 @@
-﻿using FluentResults;
-using TaskHub.Domain.Abstraction;
+﻿using TaskHub.Domain.Abstraction;
+using TaskHub.Domain.Base;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 
@@ -21,14 +21,14 @@ namespace TaskHub.Domain.Entities
 
         public static Result<TaskList> Create(TaskListTitle title)
         {
-            return new TaskList(Guid.NewGuid(), title);
+            return Result.Success(new TaskList(Guid.NewGuid(), title));
         }
 
 
         public Result Rename(TaskListTitle title)
         {
             Title = title;
-            return Result.Ok();
+            return Result.Success();
         }
 
         public Result<TaskItem> AddTask(TaskItemTitle title, TaskDescription? description, TaskPriority priority)

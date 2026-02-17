@@ -1,8 +1,8 @@
-﻿using FluentResults;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
+using TaskHub.Domain.Base;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 
@@ -17,30 +17,30 @@ namespace TaskHub.Application.Features.TaskItem.Commands
             var getResult = await taskListCommandRepository.GetByIdAsync(request.TaskListId, ct);
             if (getResult.IsFailed)
             {
-                return Result.Fail(getResult.Errors);
+                return Result.Fail<Guid>(getResult.Errors);
             }
 
             var titleResult = TaskItemTitle.Create(request.Title);
             if (titleResult.IsFailed)
             {
-                return Result.Fail(titleResult.Errors);
+                return Result.Fail<Guid>(titleResult.Errors);
             }
             var descriptionResult = request.Description is null ? null : TaskDescription.Create(request.Description);
             if (descriptionResult is not null && descriptionResult.IsFailed)
             {
-                return Result.Fail(descriptionResult.Errors);
+                return Result.Fail<Guid>(descriptionResult.Errors);
             }
 
             var createResult = Domain.Entities.TaskItem.Create(request.TaskListId, titleResult.Value, descriptionResult?.Value, request.Priority);
             if (createResult.IsFailed)
             {
-                return Result.Fail(createResult.Errors);
+                return Result.Fail<Guid>(createResult.Errors);
             }
 
             await taskItemCommandRepository.AddAsync(createResult.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
-            return createResult.Value.Id;
+            return Result.Success(createResult.Value.Id);
         }
     }
 

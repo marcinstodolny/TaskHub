@@ -48,7 +48,7 @@ namespace TaskHub.UnitTests
             var result = TaskItemTitle.Create(longText);
 
             Assert.True(result.IsFailed);
-            Assert.Contains(result.Errors, e => e.Message.Contains("exceed"));
+            Assert.Contains(result.Errors, e => e.Contains("exceed"));
         }
 
         [Fact]
@@ -59,7 +59,7 @@ namespace TaskHub.UnitTests
             var result = TaskListTitle.Create(longText);
 
             Assert.True(result.IsFailed);
-            Assert.Contains(result.Errors, e => e.Message.Contains("exceed"));
+            Assert.Contains(result.Errors, e => e.Contains("exceed"));
         }
     }
 }

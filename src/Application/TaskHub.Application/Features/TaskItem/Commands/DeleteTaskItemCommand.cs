@@ -1,8 +1,8 @@
-using FluentResults;
 using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
+using TaskHub.Domain.Base;
 
 namespace TaskHub.Application.Features.TaskItem.Commands;
 
@@ -24,7 +24,7 @@ public sealed class DeleteTaskItemCommandHandler(
         taskItemCommandRepository.Remove(getResult.Value);
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result.Ok();
+        return Result.Success();
     }
 }
 
