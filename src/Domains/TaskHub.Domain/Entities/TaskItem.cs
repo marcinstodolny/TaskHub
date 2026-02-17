@@ -1,5 +1,5 @@
-﻿using FluentResults;
-using TaskHub.Domain.Abstraction;
+﻿using TaskHub.Domain.Abstraction;
+using TaskHub.Domain.Base;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
@@ -32,7 +32,7 @@ namespace TaskHub.Domain.Entities
             var task = new TaskItem(Guid.NewGuid(), taskListId, title, description, priority, TaskStatus.Todo);
 
             task.Raise(new TaskCreated(task.Id));
-            return Result.Ok(task);
+            return Result.Success(task);
         }
 
         public Result UpdateTitle(TaskItemTitle? title)
@@ -43,7 +43,7 @@ namespace TaskHub.Domain.Entities
             Title = title;
 
             Raise(new TaskUpdated(Id));
-            return Result.Ok();
+            return Result.Success();
         }
 
         public Result Update(TaskItemTitle title, TaskDescription? description, TaskPriority priority, DateTime nowUtc)
@@ -57,7 +57,7 @@ namespace TaskHub.Domain.Entities
             UpdatedAt = nowUtc;
 
             Raise(new TaskUpdated(Id));
-            return Result.Ok();
+            return Result.Success();
         }
 
         public Result Start(DateTime nowUtc)
@@ -72,7 +72,7 @@ namespace TaskHub.Domain.Entities
 
             Status = TaskStatus.InProgress;
             UpdatedAt = nowUtc;
-            return Result.Ok();
+            return Result.Success();
         }
 
 
@@ -88,7 +88,7 @@ namespace TaskHub.Domain.Entities
 
             Status = TaskStatus.Done;
             UpdatedAt = nowUtc;
-            return Result.Ok();
+            return Result.Success();
         }
 
 
@@ -104,7 +104,7 @@ namespace TaskHub.Domain.Entities
 
             Status = TaskStatus.Cancelled;
             UpdatedAt = nowUtc;
-            return Result.Ok();
+            return Result.Success();
         }
     }
 }

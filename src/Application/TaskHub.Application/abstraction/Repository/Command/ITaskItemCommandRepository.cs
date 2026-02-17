@@ -1,4 +1,4 @@
-﻿using FluentResults;
+﻿using TaskHub.Domain.Base;
 using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.abstraction.Repository.Command

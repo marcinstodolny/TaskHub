@@ -1,6 +1,6 @@
-﻿using FluentResults;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TaskHub.Application.abstraction.Repository.Command;
+using TaskHub.Domain.Base;
 using TaskHub.Domain.Entities;
 using TaskHub.Infrastructure.Persistence;
 
@@ -21,7 +21,7 @@ namespace TaskHub.Infrastructure.Repositories.Command
         public async Task<Result<TaskItem>> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
             var task = await db.TaskItems.FirstOrDefaultAsync(t => t.Id == id, ct);
-            return task is null ? Result.Fail($"Task with id {id} not found") : task;
+            return task is null ? Result.Fail<TaskItem>($"Task with id {id} not found") : Result.Success(task);
         }
     }
 }

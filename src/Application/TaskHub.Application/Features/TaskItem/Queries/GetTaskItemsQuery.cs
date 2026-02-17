@@ -1,9 +1,9 @@
-﻿using FluentResults;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Application.Features.TaskItem.Response;
 using TaskHub.Application.Response;
+using TaskHub.Domain.Base;
 
 namespace TaskHub.Application.Features.TaskItem.Queries;
 
@@ -16,7 +16,7 @@ public sealed class GetTaskItemsQueryHandler(ITaskItemQueryRepository taskItemQu
     public async Task<Result<PaginatedResponse<TaskItemResponse>>> Handle(GetTaskItemsQuery request, CancellationToken ct)
     {
         var items = await taskItemQueryRepository.GetAllAsync(request.Page, request.Count, ct);
-        return items;
+        return Result.Success(items);
     }
 }
 

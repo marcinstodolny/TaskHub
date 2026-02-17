@@ -1,9 +1,9 @@
-﻿using FluentResults;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Application.Features.TaskList.Response;
 using TaskHub.Application.Response;
+using TaskHub.Domain.Base;
 
 namespace TaskHub.Application.Features.TaskList.Queries
 {
@@ -14,7 +14,7 @@ namespace TaskHub.Application.Features.TaskList.Queries
         public async Task<Result<PaginatedResponse<TaskListResponse>>> Handle(GetTaskListsQuery request, CancellationToken ct)
         {
             var list = await taskListQueryRepository.GetAllAsync(request.Page, request.Count, ct);
-            return list;
+            return Result.Success(list);
         }
     }
 

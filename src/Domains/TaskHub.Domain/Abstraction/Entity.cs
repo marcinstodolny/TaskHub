@@ -1,6 +1,4 @@
-﻿using FluentResults;
-
-namespace TaskHub.Domain.Abstraction
+﻿namespace TaskHub.Domain.Abstraction
 {
     public abstract class Entity<TId>
     {

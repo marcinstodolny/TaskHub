@@ -1,8 +1,8 @@
-﻿using FluentResults;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Domain.Base;
 
 namespace TaskHub.Application.Features.TaskItem.Queries;
 
@@ -14,7 +14,12 @@ public sealed class GetTaskItemByIdQueryHandler(ITaskItemQueryRepository taskIte
     public async Task<Result<TaskItemResponse>> Handle(GetTaskItemByIdQuery request, CancellationToken ct)
     {
         var item = await taskItemQueryRepository.GetByIdAsync(request.TaskItemId, ct);
-        return item ?? Result.Fail<TaskItemResponse>($"TaskItem {request.TaskItemId} not found.");
+        if (item == null)
+        {
+            return Result.Fail<TaskItemResponse>($"TaskItem {request.TaskItemId} not found.");
+        }
+
+        return Result.Success(item);
     }
 }
 

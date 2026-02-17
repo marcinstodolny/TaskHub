@@ -1,9 +1,9 @@
-﻿using FluentResults;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
 using TaskHub.Application.Features.TaskList.Response;
+using TaskHub.Domain.Base;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Features.TaskList.Commands
@@ -17,18 +17,18 @@ namespace TaskHub.Application.Features.TaskList.Commands
             var titleResult = TaskListTitle.Create(request.Title);
             if (titleResult.IsFailed)
             {
-                return Result.Fail(titleResult.Errors);
+                return Result.Fail<TaskListResponse>(titleResult.Errors);
             }
 
             var taskList = Domain.Entities.TaskList.Create(titleResult.Value);
             if (taskList.IsFailed)
             {
-                return Result.Fail(taskList.Errors);
+                return Result.Fail<TaskListResponse>(taskList.Errors);
             }
             await taskListCommandRepository.AddAsync(taskList.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
-            return new TaskListResponse() { Id = taskList.Value.Id, Title = taskList.Value.Title.Value };
+            return Result.Success(new TaskListResponse() { Id = taskList.Value.Id, Title = taskList.Value.Title.Value });
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using FluentResults;
+﻿using TaskHub.Domain.Base;
 
 namespace TaskHub.Domain.ValueObjects
 {
@@ -19,7 +19,7 @@ namespace TaskHub.Domain.ValueObjects
 
             var trimmed = value.Trim();
 
-            return trimmed.Length > MaxLength ? Result.Fail<TaskListTitle>($"Title cannot exceed {MaxLength} characters.") : Result.Ok(new TaskListTitle(trimmed));
+            return trimmed.Length > MaxLength ? Result.Fail<TaskListTitle>($"Title cannot exceed {MaxLength} characters.") : Result.Success(new TaskListTitle(trimmed));
         }
     }
 }

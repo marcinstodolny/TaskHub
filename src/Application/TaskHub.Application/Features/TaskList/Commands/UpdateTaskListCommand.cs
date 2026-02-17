@@ -1,9 +1,9 @@
-using FluentResults;
 using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
 using TaskHub.Application.Features.TaskList.Response;
+using TaskHub.Domain.Base;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Features.TaskList.Commands;
@@ -20,25 +20,25 @@ public sealed class UpdateTaskListCommandHandler(
         var getResult = await taskListCommandRepository.GetByIdAsync(request.TaskListId, ct);
         if (getResult.IsFailed)
         {
-            return Result.Fail(getResult.Errors);
+            return Result.Fail<TaskListResponse>(getResult.Errors);
         }
 
         var titleResult = TaskListTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
-            return Result.Fail(titleResult.Errors);
+            return Result.Fail<TaskListResponse>(titleResult.Errors);
         }
 
         var taskList = getResult.Value;
         var renameResult = taskList.Rename(titleResult.Value);
         if (renameResult.IsFailed)
         {
-            return Result.Fail(renameResult.Errors);
+            return Result.Fail<TaskListResponse>(renameResult.Errors);
         }
 
         await unitOfWork.SaveChangesAsync(ct);
 
-        return new TaskListResponse { Id = taskList.Id, Title = taskList.Title.Value };
+        return Result.Success(new TaskListResponse { Id = taskList.Id, Title = taskList.Title.Value });
     }
 }
 

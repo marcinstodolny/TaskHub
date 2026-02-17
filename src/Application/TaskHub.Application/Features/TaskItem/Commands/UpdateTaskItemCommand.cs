@@ -1,9 +1,9 @@
-using FluentResults;
 using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
 using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Domain.Base;
 using TaskHub.Domain.ValueObjects;
 using TaskPriority = TaskHub.Domain.Enums.TaskPriority;
 
@@ -26,13 +26,13 @@ public sealed class UpdateTaskItemCommandHandler(
         var getResult = await taskItemCommandRepository.GetByIdAsync(request.TaskItemId, ct);
         if (getResult.IsFailed)
         {
-            return Result.Fail(getResult.Errors);
+            return Result.Fail<TaskItemResponse>(getResult.Errors);
         }
 
         var titleResult = TaskItemTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
-            return Result.Fail(titleResult.Errors);
+            return Result.Fail<TaskItemResponse>(titleResult.Errors);
         }
 
         TaskDescription? description = null;
@@ -41,7 +41,7 @@ public sealed class UpdateTaskItemCommandHandler(
             var descriptionResult = TaskDescription.Create(request.Description);
             if (descriptionResult.IsFailed)
             {
-                return Result.Fail(descriptionResult.Errors);
+                return Result.Fail<TaskItemResponse>(descriptionResult.Errors);
             }
 
             description = descriptionResult.Value;
@@ -51,12 +51,12 @@ public sealed class UpdateTaskItemCommandHandler(
         var updateResult = taskItem.Update(titleResult.Value, description, request.Priority, dateTimeProvider.UtcNow());
         if (updateResult.IsFailed)
         {
-            return Result.Fail(updateResult.Errors);
+            return Result.Fail<TaskItemResponse>(updateResult.Errors);
         }
 
         await unitOfWork.SaveChangesAsync(ct);
 
-        return new TaskItemResponse
+        return Result.Success(new TaskItemResponse
         {
             Id = taskItem.Id,
             TaskListId = taskItem.TaskListId,
@@ -64,7 +64,7 @@ public sealed class UpdateTaskItemCommandHandler(
             Description = taskItem.Description?.Value,
             Priority = taskItem.Priority,
             Status = taskItem.Status
-        };
+        });
     }
 }
 
