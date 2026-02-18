@@ -1,16 +1,16 @@
 services:
   taskhub.web:
     environment:
-        - ASPNETCORE_ENVIRONMENT=Development
-        - ASPNETCORE_HTTP_PORTS=8080
-        - Api__BaseAddress=http://taskhub.api:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - Api__BaseAddress=http://taskhub.api:8080
     depends_on:
       taskhub.api:
         condition: service_started
       db:
         condition: service_healthy
     ports:
-        - "5262:8080"
+      - "5262:8080"
 
   taskhub.api:
     environment:
@@ -18,9 +18,6 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
       - ConnectionStrings__TaskHub=Server=db,1433;Database=TaskHub;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=True
-    depends_on:
-      db:
-        condition: service_healthy
     ports:
       - "8080:8080"
       - "8081:8081"
@@ -29,3 +26,7 @@ services:
       - ${USER_SECRETS_PATH:-./.docker/usersecrets}:/root/.microsoft/usersecrets:ro
       - ${HTTPS_CERTS_PATH:-./.docker/https}:/home/app/.aspnet/https:ro
       - ${HTTPS_CERTS_PATH:-./.docker/https}:/root/.aspnet/https:ro
+
+  db:
+    ports:
+      - "1433:1433"
