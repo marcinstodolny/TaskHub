@@ -1,0 +1,257 @@
+@page "/endpoint-tester"
+@rendermode InteractiveServer
+@using System.Net
+@using System.Net.Http.Headers
+@using System.Text
+@using System.Text.Json
+@using Microsoft.AspNetCore.WebUtilities
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Endpoint Tester</PageTitle>
+
+<h1>Endpoint Tester</h1>
+
+<p class="text-muted">Use this page to test TaskHub API endpoints without Swagger.</p>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <EditForm Model="request" OnSubmit="SendRequestAsync">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label" for="httpMethod">Method</label>
+                    <InputSelect id="httpMethod" class="form-select" @bind-Value="request.Method">
+                        @foreach (var method in Methods)
+                        {
+                            <option value="@method">@method</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-10">
+                    <label class="form-label" for="endpointPath">Path</label>
+                    <InputText id="endpointPath" class="form-control" @bind-Value="request.Path" placeholder="/api/TaskList" />
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label" for="queryString">Query string (optional)</label>
+                <InputText id="queryString" class="form-control" @bind-Value="request.QueryString" placeholder="page=1&pageSize=10" />
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label" for="requestBody">JSON Body (optional)</label>
+                <InputTextArea id="requestBody" class="form-control font-monospace" rows="8" @bind-Value="request.Body" />
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary" disabled="@isSending">Send</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="LoadTaskListTemplate">GET Task Lists</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="LoadCreateTaskListTemplate">POST Task List</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="LoadCreateTaskItemTemplate">POST Task Item</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+
+@if (response is not null)
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Response</span>
+            <span class="badge @GetStatusCss(response.StatusCode)">@((int)response.StatusCode) @response.StatusCode</span>
+        </div>
+        <div class="card-body">
+            <p><strong>Duration:</strong> @response.DurationMs ms</p>
+            <pre class="bg-light border rounded p-3"><code>@response.Body</code></pre>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly string[] Methods = ["GET", "POST", "PUT", "DELETE"];
+    private readonly JsonSerializerOptions serializerOptions = new() { WriteIndented = true };
+
+    private EndpointRequest request = new()
+    {
+        Method = "GET",
+        Path = "/api/TaskList",
+        QueryString = "page=1&pageSize=10"
+    };
+
+    private EndpointResponse? response;
+    private string? errorMessage;
+    private bool isSending;
+
+    private async Task SendRequestAsync()
+    {
+        errorMessage = null;
+        response = null;
+
+        if (string.IsNullOrWhiteSpace(request.Path))
+        {
+            errorMessage = "Path is required.";
+            return;
+        }
+
+        isSending = true;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("TaskHubApi");
+            using var message = new HttpRequestMessage(new HttpMethod(request.Method), BuildRequestUri());
+            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            if (ShouldIncludeBody(request.Method) && !string.IsNullOrWhiteSpace(request.Body))
+            {
+                if (!IsValidJson(request.Body))
+                {
+                    errorMessage = "Request body is not valid JSON.";
+                    return;
+                }
+
+                message.Content = new StringContent(request.Body, Encoding.UTF8, "application/json");
+            }
+
+            var startedAt = DateTime.UtcNow;
+            var httpResponse = await client.SendAsync(message);
+            var elapsed = DateTime.UtcNow - startedAt;
+
+            var body = await httpResponse.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                body = "<empty>";
+            }
+            else if (TryFormatJson(body, out var formattedBody))
+            {
+                body = formattedBody;
+            }
+
+            response = new EndpointResponse(httpResponse.StatusCode, body, (long)elapsed.TotalMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    private string BuildRequestUri()
+    {
+        var trimmedPath = request.Path.StartsWith('/') ? request.Path : $"/{request.Path}";
+
+        return string.IsNullOrWhiteSpace(request.QueryString)
+            ? trimmedPath
+            : QueryHelpers.AddQueryString(trimmedPath, ParseQueryString(request.QueryString));
+    }
+
+    private static bool ShouldIncludeBody(string method) =>
+        method is "POST" or "PUT" or "PATCH";
+
+    private bool IsValidJson(string payload)
+    {
+        try
+        {
+            JsonDocument.Parse(payload);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool TryFormatJson(string payload, out string formatted)
+    {
+        try
+        {
+            using var jsonDocument = JsonDocument.Parse(payload);
+            formatted = JsonSerializer.Serialize(jsonDocument, serializerOptions);
+            return true;
+        }
+        catch
+        {
+            formatted = payload;
+            return false;
+        }
+    }
+
+    private static Dictionary<string, string?> ParseQueryString(string queryString)
+    {
+        var parsed = QueryHelpers.ParseQuery(queryString);
+        return parsed.ToDictionary(kvp => kvp.Key, kvp => (string?)kvp.Value.ToString());
+    }
+
+    private static string GetStatusCss(HttpStatusCode statusCode)
+    {
+        var code = (int)statusCode;
+
+        if (code >= 200 && code < 300)
+        {
+            return "bg-success";
+        }
+
+        if (code >= 400 && code < 500)
+        {
+            return "bg-warning text-dark";
+        }
+
+        if (code >= 500)
+        {
+            return "bg-danger";
+        }
+
+        return "bg-secondary";
+    }
+
+    private void LoadTaskListTemplate()
+    {
+        request.Method = "GET";
+        request.Path = "/api/TaskList";
+        request.QueryString = "page=1&pageSize=10";
+        request.Body = string.Empty;
+    }
+
+    private void LoadCreateTaskListTemplate()
+    {
+        request.Method = "POST";
+        request.Path = "/api/TaskList";
+        request.QueryString = string.Empty;
+        request.Body = JsonSerializer.Serialize(new
+        {
+            Title = "My Task List"
+        }, serializerOptions);
+    }
+
+    private void LoadCreateTaskItemTemplate()
+    {
+        request.Method = "POST";
+        request.Path = "/api/TaskItem";
+        request.QueryString = string.Empty;
+        request.Body = JsonSerializer.Serialize(new
+        {
+            TaskListId = "00000000-0000-0000-0000-000000000000",
+            Title = "Buy groceries",
+            Description = "Milk, eggs, and bread",
+            Priority = 1
+        }, serializerOptions);
+    }
+
+    private sealed class EndpointRequest
+    {
+        public string Method { get; set; } = "GET";
+        public string Path { get; set; } = string.Empty;
+        public string QueryString { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+    }
+
+    private sealed record EndpointResponse(HttpStatusCode StatusCode, string Body, long DurationMs);
+}

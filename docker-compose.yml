@@ -1,4 +1,10 @@
 services:
+  taskhub.web:
+    image: ${DOCKER_REGISTRY-}taskhubweb
+    build:
+      context: .
+      dockerfile: src/Web/TaskHub.Web/Dockerfile
+
   taskhub.api:
     image: ${DOCKER_REGISTRY-}taskhubapi
     build:
