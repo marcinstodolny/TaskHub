@@ -2,9 +2,16 @@ using TaskHub.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? "https://localhost:7040";
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddHttpClient("TaskHubApi", client =>
+{
+    client.BaseAddress = new Uri(apiBaseAddress);
+});
 
 var app = builder.Build();
 

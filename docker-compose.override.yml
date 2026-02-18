@@ -1,4 +1,17 @@
 services:
+  taskhub.web:
+    environment:
+        - ASPNETCORE_ENVIRONMENT=Development
+        - ASPNETCORE_HTTP_PORTS=8080
+        - Api__BaseAddress=http://taskhub.api:8080
+    depends_on:
+      taskhub.api:
+        condition: service_started
+      db:
+        condition: service_healthy
+    ports:
+        - "5262:8080"
+
   taskhub.api:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
