@@ -30,21 +30,22 @@ TaskHub is a sample .NET solution showcasing **CQRS**, **DDD-style layering**, *
 
 ### Docker Compose
 
-Set the required environment variables before running Docker Compose:
+1. Copy sample environment variables and adjust values if needed:
 
 ```bash
-export MSSQL_SA_PASSWORD='YourStrong!Passw0rd'
-export USER_SECRETS_PATH="$HOME/.microsoft/usersecrets"
-export HTTPS_CERTS_PATH="$HOME/.aspnet/https"
+cp .env.example .env
 ```
 
-Then run:
+2. Start the stack:
 
 ```bash
 docker compose up --build
 ```
 
+> `docker-compose.override.yml` is used for local development (ports, development environment variables, and optional local certs/secrets mounts).
+
 Services:
+- Web: `http://localhost:5262`
 - API: `http://localhost:8080` / `https://localhost:8081`
 - SQL Server: `localhost:1433`
 
