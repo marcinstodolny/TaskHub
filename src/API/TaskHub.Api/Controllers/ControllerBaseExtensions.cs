@@ -5,22 +5,19 @@ namespace TaskHub.Api.Controllers;
 
 internal static class ControllerBaseExtensions
 {
-    extension(ControllerBase controller)
+    public static ObjectResult ToProblem(this ControllerBase controller, Result result, int statusCode, string title)
     {
-        public ObjectResult ToProblem(Result result, int statusCode, string title)
-        {
-            return controller.Problem(
-                statusCode: statusCode,
-                title: title,
-                detail: string.Join(" ", result.Errors));
-        }
+        return controller.Problem(
+            statusCode: statusCode,
+            title: title,
+            detail: string.Join(" ", result.Errors));
+    }
 
-        public ObjectResult ToProblem<T>(Result<T> result, int statusCode, string title)
-        {
-            return controller.Problem(
-                statusCode: statusCode,
-                title: title,
-                detail: string.Join(" ", result.Errors));
-        }
+    public static ObjectResult ToProblem<T>(this ControllerBase controller, Result<T> result, int statusCode, string title)
+    {
+        return controller.Problem(
+            statusCode: statusCode,
+            title: title,
+            detail: string.Join(" ", result.Errors));
     }
 }
