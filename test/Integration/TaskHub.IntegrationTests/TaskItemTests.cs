@@ -276,4 +276,60 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         Assert.Contains(response.Value.Items, list => list.Id == secondItemResult.Value);
     }
 
+    [Fact]
+    public async Task UpdateStatus_Endpoint_ShouldChangeStatusEndToEnd()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for endpoint status"));
+        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Task for status update",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = fixture.ApiFactory.CreateClient();
+
+        var updateResponse = await client.PostAsJsonAsync(
+            $"/api/TaskItem/{createItemResult.Value}/status",
+            new { Status = TaskStatus.InProgress });
+
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var getResponse = await client.GetFromJsonAsync<TaskItemResponse>($"/api/TaskItem/{createItemResult.Value}");
+
+        Assert.NotNull(getResponse);
+        Assert.Equal(TaskStatus.InProgress, getResponse.Status);
+    }
+
+    [Fact]
+    public async Task GetTaskItemsBoard_Endpoint_ShouldReturnTasksForSelectedList()
+    {
+        await fixture.ResetAsync();
+
+        var selectedListResult = await fixture.SendAsync(new CreateTaskListCommand("Selected list"));
+        var otherListResult = await fixture.SendAsync(new CreateTaskListCommand("Other list"));
+
+        var selectedItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            selectedListResult.Value.Id,
+            "Selected task",
+            "Selected description",
+            TaskPriority.High));
+
+        await fixture.SendAsync(new CreateTaskItemCommand(
+            otherListResult.Value.Id,
+            "Other task",
+            "Other description",
+            TaskPriority.Low));
+
+        using var client = fixture.ApiFactory.CreateClient();
+        var boardItems = await client.GetFromJsonAsync<List<TaskItemResponse>>($"/api/TaskItem/board/{selectedListResult.Value.Id}");
+
+        Assert.NotNull(boardItems);
+        Assert.Single(boardItems);
+        Assert.Equal(selectedItemResult.Value, boardItems[0].Id);
+        Assert.Equal("Selected task", boardItems[0].Title);
+        Assert.Equal(TaskStatus.Todo, boardItems[0].Status);
+    }
+
 }

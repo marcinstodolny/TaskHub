@@ -49,6 +49,24 @@ Services:
 - API: `http://localhost:8080` / `https://localhost:8081`
 - SQL Server: `localhost:1433`
 
+## Blazor Task Board
+
+The Blazor web app now includes a minimal Kanban-style **Task Board** page.
+
+1. Start the stack:
+
+```bash
+docker compose up --build
+```
+
+2. Open the web client at `http://localhost:5262`.
+3. Navigate to **Task Board** in the left menu.
+4. Select a task list and move cards between statuses using the **Move to** dropdown on each card.
+
+Notes:
+- Columns map directly to domain statuses: `Todo`, `InProgress`, `Done`, `Cancelled`.
+- Status updates use API rules for allowed transitions (invalid transitions return API errors shown in the UI).
+
 ## Testing
 
 ### Unit tests

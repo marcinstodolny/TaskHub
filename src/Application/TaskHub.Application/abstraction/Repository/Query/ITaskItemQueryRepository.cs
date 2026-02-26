@@ -7,5 +7,6 @@ namespace TaskHub.Application.abstraction.Repository.Query
     {
         Task<TaskItemResponse?> GetByIdAsync(Guid taskId, CancellationToken ct);
         Task<PaginatedResponse<TaskItemResponse>> GetAllAsync(int page, int count, CancellationToken ct);
+        Task<IReadOnlyCollection<TaskItemResponse>> GetByTaskListIdAsync(Guid taskListId, CancellationToken ct);
     }
 }
