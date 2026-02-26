@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskItem.Queries;
@@ -300,6 +301,37 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         Assert.NotNull(problem);
         Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
+        Assert.True(problem.Extensions.TryGetValue("errors", out var errorsObject));
+
+        var errors = Assert.IsType<JsonElement>(errorsObject);
+        Assert.Equal(JsonValueKind.Array, errors.ValueKind);
+        Assert.NotEmpty(errors.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task UpdateStatus_Endpoint_MissingTask_ShouldReturnNotFoundProblemDetails()
+    {
+        await fixture.ResetAsync();
+
+        using var client = fixture.ApiFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/TaskItem/{Guid.NewGuid()}/status",
+            new { Status = TaskStatus.Done });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Unable to update task status", problem.Title);
+        Assert.True(problem.Extensions.TryGetValue("errors", out var errorsObject));
+
+        var errors = Assert.IsType<JsonElement>(errorsObject);
+        Assert.Equal(JsonValueKind.Array, errors.ValueKind);
+        Assert.Contains(errors.EnumerateArray(), element =>
+            element.ValueKind == JsonValueKind.String &&
+            element.GetString() is not null &&
+            element.GetString()!.Contains("not found", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

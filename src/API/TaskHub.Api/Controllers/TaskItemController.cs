@@ -55,9 +55,14 @@ namespace TaskHub.Api.Controllers
         public async Task<IActionResult> UpdateTaskStatus(Guid taskItemId, [FromBody] UpdateTaskStatusRequest request, CancellationToken ct)
         {
             var result = await mediator.Send(new UpdateTaskItemStatusCommand(taskItemId, request.Status), ct);
-            return result.IsFailed
-                ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to update task status")
-                : Ok();
+            if (result.IsSuccess) return Ok();
+
+            var statusCode = result.Errors.Any(error => error.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+
+            return this.ToProblem(result, statusCode, "Unable to update task status");
+
         }
 
         [HttpPut("{taskItemId:guid}")]
