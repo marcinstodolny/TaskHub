@@ -15,5 +15,6 @@ namespace TaskHub.Application.Features.TaskItem.Response
         public string? Description { get; set; }
         public TaskPriority Priority { get; set; }
         public TaskStatus Status { get; set; }
+        public IReadOnlyCollection<TaskStatus> AllowedTargetStatuses { get; set; } = [];
     };
 }

@@ -1,4 +1,4 @@
-﻿namespace TaskHub.Application.Response
+﻿namespace TaskHub.Application.Base.Response
 {
     public sealed record PaginatedResponse<T>
     {

@@ -14,16 +14,16 @@
     <InputSelect TValue="Guid?"
                  id="taskListSelect"
                  class="form-select"
-                 @bind-Value="selectedTaskListId"
+                 @bind-Value="_selectedTaskListId"
                  @bind-Value:after="OnSelectedTaskListChangedAsync"
-                 disabled="@isLoadingLists">
-        @if (taskLists.Count == 0)
+                 disabled="@_isLoadingLists">
+        @if (_taskLists.Count == 0)
         {
             <option value="">No task lists available</option>
         }
         else
         {
-            @foreach (var taskList in taskLists)
+            @foreach (var taskList in _taskLists)
             {
                 <option value="@taskList.Id">@taskList.Title</option>
             }
@@ -31,23 +31,23 @@
     </InputSelect>
 </div>
 
-@if (!string.IsNullOrWhiteSpace(errorMessage))
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
-    <div class="alert alert-danger">@errorMessage</div>
+    <div class="alert alert-danger">@_errorMessage</div>
 }
 
-@if (isLoadingBoard)
+@if (_isLoadingBoard)
 {
     <p>Loading task board...</p>
 }
-else if (selectedTaskListId is null)
+else if (_selectedTaskListId is null)
 {
     <p>Select a task list to load tasks.</p>
 }
 else
 {
     <div class="task-board-grid">
-        @foreach (var status in boardStatuses)
+        @foreach (var status in BoardStatuses)
         {
             <section class="task-board-column">
                 <header class="task-board-column-header">
@@ -56,7 +56,7 @@ else
                 </header>
 
                 <div class="task-board-column-content">
-                    @foreach (var task in tasks.Where(task => task.Status == status))
+                    @foreach (var task in _tasks.Where(task => task.Status == status))
                     {
                         <article class="task-card">
                             <div class="d-flex justify-content-between align-items-start gap-2">
@@ -79,7 +79,7 @@ else
                                              ValueExpression="() => task.Status"
                                              disabled="@IsTaskUpdating(task.Id)">
                                     <option value="@task.Status">Select status</option>
-                                    @foreach (var targetStatus in GetAllowedTargetStatuses(task.Status))
+                                    @foreach (var targetStatus in task.AllowedTargetStatuses)
                                     {
                                         <option value="@targetStatus">@ToStatusLabel(targetStatus)</option>
                                     }
@@ -94,7 +94,7 @@ else
 }
 
 @code {
-    private static readonly TaskStatus[] boardStatuses =
+    private static readonly TaskStatus[] BoardStatuses =
     [
         TaskStatus.Todo,
         TaskStatus.InProgress,
@@ -102,15 +102,15 @@ else
         TaskStatus.Cancelled
     ];
 
-    private readonly JsonSerializerOptions serializerOptions = new() { PropertyNameCaseInsensitive = true };
+    private readonly JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private readonly HashSet<Guid> updatingTaskIds = [];
-    private List<TaskListLightDto> taskLists = [];
-    private List<TaskCardDto> tasks = [];
-    private Guid? selectedTaskListId;
-    private string? errorMessage;
-    private bool isLoadingLists;
-    private bool isLoadingBoard;
+    private readonly HashSet<Guid> _updatingTaskIds = [];
+    private List<TaskListLightDto> _taskLists = [];
+    private List<TaskCardDto> _tasks = [];
+    private Guid? _selectedTaskListId;
+    private string? _errorMessage;
+    private bool _isLoadingLists;
+    private bool _isLoadingBoard;
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,8 +119,8 @@ else
 
     private async Task LoadTaskListsAsync()
     {
-        isLoadingLists = true;
-        errorMessage = null;
+        _isLoadingLists = true;
+        _errorMessage = null;
 
         try
         {
@@ -129,39 +129,39 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                errorMessage = await GetErrorMessageAsync(response, "Unable to load task lists.");
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to load task lists.");
                 return;
             }
 
-            var listResponse = await response.Content.ReadFromJsonAsync<PaginatedResponseDto<TaskListLightDto>>(serializerOptions);
-            taskLists = listResponse?.Items ?? [];
+            var listResponse = await response.Content.ReadFromJsonAsync<PaginatedResponseDto<TaskListLightDto>>(_serializerOptions);
+            _taskLists = listResponse?.Items ?? [];
 
-            selectedTaskListId = taskLists.Count > 0 ? taskLists[0].Id : null;
+            _selectedTaskListId = _taskLists.Count > 0 ? _taskLists[0].Id : null;
 
-            if (selectedTaskListId is not null)
+            if (_selectedTaskListId is not null)
             {
                 await LoadBoardAsync();
             }
             else
             {
-                tasks = [];
+                _tasks = [];
             }
         }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
+            _errorMessage = exception.Message;
         }
         finally
         {
-            isLoadingLists = false;
+            _isLoadingLists = false;
         }
     }
 
     private async Task OnSelectedTaskListChangedAsync()
     {
-        if (selectedTaskListId is null)
+        if (_selectedTaskListId is null)
         {
-            tasks = [];
+            _tasks = [];
             return;
         }
 
@@ -170,35 +170,35 @@ else
 
     private async Task LoadBoardAsync()
     {
-        if (selectedTaskListId is null)
+        if (_selectedTaskListId is null)
         {
-            tasks = [];
+            _tasks = [];
             return;
         }
 
-        isLoadingBoard = true;
-        errorMessage = null;
+        _isLoadingBoard = true;
+        _errorMessage = null;
 
         try
         {
             using var client = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await client.GetAsync($"/api/TaskItem/board/{selectedTaskListId.Value}");
+            var response = await client.GetAsync($"/api/TaskItem/board/{_selectedTaskListId.Value}");
             if (!response.IsSuccessStatusCode)
             {
-                errorMessage = await GetErrorMessageAsync(response, "Unable to load task board.");
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to load task board.");
                 return;
             }
 
-            var boardTasks = await response.Content.ReadFromJsonAsync<List<TaskCardDto>>(serializerOptions);
-            tasks = boardTasks ?? [];
+            var boardTasks = await response.Content.ReadFromJsonAsync<List<TaskCardDto>>(_serializerOptions);
+            _tasks = boardTasks ?? [];
         }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
+            _errorMessage = exception.Message;
         }
         finally
         {
-            isLoadingBoard = false;
+            _isLoadingBoard = false;
         }
     }
 
@@ -211,8 +211,8 @@ else
 
         var previousStatus = task.Status;
         task.Status = targetStatus;
-        errorMessage = null;
-        updatingTaskIds.Add(task.Id);
+        _errorMessage = null;
+        _updatingTaskIds.Add(task.Id);
 
         try
         {
@@ -222,23 +222,26 @@ else
             if (!response.IsSuccessStatusCode)
             {
                 task.Status = previousStatus;
-                errorMessage = await GetErrorMessageAsync(response, "Unable to update task status.");
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to update task status.");
+                return;
             }
+
+            await LoadBoardAsync();
         }
         catch (Exception exception)
         {
             task.Status = previousStatus;
-            errorMessage = exception.Message;
+            _errorMessage = exception.Message;
         }
         finally
         {
-            updatingTaskIds.Remove(task.Id);
+            _updatingTaskIds.Remove(task.Id);
         }
     }
 
-    private bool IsTaskUpdating(Guid taskId) => updatingTaskIds.Contains(taskId);
+    private bool IsTaskUpdating(Guid taskId) => _updatingTaskIds.Contains(taskId);
 
-    private int GetCountByStatus(TaskStatus status) => tasks.Count(task => task.Status == status);
+    private int GetCountByStatus(TaskStatus status) => _tasks.Count(task => task.Status == status);
 
     private static string ToStatusLabel(TaskStatus status) => status switch
     {
@@ -247,15 +250,6 @@ else
         TaskStatus.Done => "Done",
         TaskStatus.Cancelled => "Cancelled",
         _ => status.ToString()
-    };
-
-    private static IReadOnlyCollection<TaskStatus> GetAllowedTargetStatuses(TaskStatus currentStatus) => currentStatus switch
-    {
-        TaskStatus.Todo => [TaskStatus.InProgress, TaskStatus.Done, TaskStatus.Cancelled],
-        TaskStatus.InProgress => [TaskStatus.Done, TaskStatus.Cancelled],
-        TaskStatus.Done => [],
-        TaskStatus.Cancelled => [],
-        _ => []
     };
 
     private static string GetStatusBadgeClass(TaskStatus status) => status switch
@@ -278,7 +272,7 @@ else
 
         try
         {
-            var problem = JsonSerializer.Deserialize<ProblemDetailsDto>(responseText, serializerOptions);
+            var problem = JsonSerializer.Deserialize<ProblemDetailsDto>(responseText, _serializerOptions);
             return problem?.Detail ?? fallbackMessage;
         }
         catch

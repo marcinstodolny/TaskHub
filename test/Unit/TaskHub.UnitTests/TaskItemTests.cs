@@ -1,5 +1,4 @@
-﻿using System.Net;
-using TaskHub.Domain;
+﻿using TaskHub.Domain;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 using Xunit;
@@ -45,13 +44,13 @@ namespace TaskHub.UnitTests
         }
 
         [Fact]
-        public void Cancel_AlreadyCanceled_ShouldFails()
+        public void UpdateStatus_AlreadyCanceled_ShouldFail()
         {
             // Arrange
-            _taskItem.Cancel(DateTime.Now);
+            _taskItem.UpdateStatus(TaskStatus.Cancelled, DateTime.Now);
 
             // Act
-            var result = _taskItem.Cancel(DateTime.Now);
+            var result = _taskItem.UpdateStatus(TaskStatus.Cancelled, DateTime.Now);
 
             // Assert
             Assert.True(result.IsFailed);
@@ -59,13 +58,13 @@ namespace TaskHub.UnitTests
         }
 
         [Fact]
-        public void Complete_AlreadyCompleted_ShouldFails()
+        public void UpdateStatus_AlreadyCompleted_ShouldFail()
         {
             // Arrange
-            _taskItem.Complete(DateTime.Now);
+            _taskItem.UpdateStatus(TaskStatus.Done, DateTime.Now);
 
             // Act
-            var result = _taskItem.Complete(DateTime.Now);
+            var result = _taskItem.UpdateStatus(TaskStatus.Done, DateTime.Now);
 
             // Assert
             Assert.True(result.IsFailed);
@@ -73,13 +72,13 @@ namespace TaskHub.UnitTests
         }
 
         [Fact]
-        public void Start_AlreadyStarted_ShouldFails()
+        public void UpdateStatus_AlreadyStarted_ShouldFail()
         {
             // Arrange
-            _taskItem.Start(DateTime.Now);
+            _taskItem.UpdateStatus(TaskStatus.InProgress, DateTime.Now);
 
             // Act
-            var result = _taskItem.Start(DateTime.Now);
+            var result = _taskItem.UpdateStatus(TaskStatus.InProgress, DateTime.Now);
 
             // Assert
             Assert.True(result.IsFailed);

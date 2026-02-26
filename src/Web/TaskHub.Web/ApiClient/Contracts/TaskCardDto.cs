@@ -9,4 +9,5 @@ public sealed record TaskCardDto
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public TaskStatus Status { get; set; }
+    public IReadOnlyCollection<TaskStatus> AllowedTargetStatuses { get; set; } = [];
 }

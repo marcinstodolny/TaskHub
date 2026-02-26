@@ -24,13 +24,7 @@ public sealed class UpdateTaskItemStatusCommandHandler(
         }
 
         var task = getResult.Value;
-        var updateResult = request.Status switch
-        {
-            TaskStatus.InProgress => task.Start(dateTimeProvider.UtcNow()),
-            TaskStatus.Done => task.Complete(dateTimeProvider.UtcNow()),
-            TaskStatus.Cancelled => task.Cancel(dateTimeProvider.UtcNow()),
-            _ => Result.Fail($"Status '{request.Status}' is not supported for updates.")
-        };
+        var updateResult = task.UpdateStatus(request.Status, dateTimeProvider.UtcNow());
 
         if (updateResult.IsFailed)
         {
@@ -48,7 +42,7 @@ public sealed class UpdateTaskItemStatusCommandValidator : AbstractValidator<Upd
     {
         RuleFor(x => x.TaskItemId).NotEmpty();
         RuleFor(x => x.Status)
-            .Must(status => status is TaskStatus.InProgress or TaskStatus.Done or TaskStatus.Cancelled)
-            .WithMessage("Status must be InProgress, Done, or Cancelled.");
+            .IsInEnum()
+            .WithMessage("Status must be a valid task status.");
     }
 }

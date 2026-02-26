@@ -1,9 +1,9 @@
 ﻿using Dapper;
 using Microsoft.EntityFrameworkCore;
 using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Base.Response;
 using TaskHub.Application.Features.TaskItem.Response;
 using TaskHub.Application.Features.TaskList.Response;
-using TaskHub.Application.Response;
 using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Repositories.Query

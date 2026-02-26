@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskItem.Queries;
 using TaskHub.Application.Features.TaskItem.Response;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
-using TaskHub.Application.Response;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 using TaskHub.IntegrationTests.Infrastructure;
@@ -91,7 +91,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     }
 
     [Fact]
-    public async Task UpdateStatus_Invalid_UnsupportedStatus_ShouldReturnFailure()
+    public async Task UpdateStatus_Invalid_SameStatus_ShouldReturnFailure()
     {
         await fixture.ResetAsync();
 
@@ -276,6 +276,64 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         Assert.Contains(response.Value.Items, list => list.Id == secondItemResult.Value);
     }
 
+
+    [Fact]
+    public async Task UpdateStatus_Endpoint_DisallowedTransition_ShouldReturnProblemDetails()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for invalid transition"));
+        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Task with invalid transition",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = fixture.ApiFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/TaskItem/{createItemResult.Value}/status",
+            new { Status = TaskStatus.Todo });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
+    }
+
+    [Fact]
+    public async Task UpdateStatus_Endpoint_ReopenDoneTask_ShouldSucceed()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for reopen"));
+        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Task for reopen",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = fixture.ApiFactory.CreateClient();
+
+        var moveToDoneResponse = await client.PostAsJsonAsync(
+            $"/api/TaskItem/{createItemResult.Value}/status",
+            new { Status = TaskStatus.Done });
+
+        Assert.Equal(HttpStatusCode.OK, moveToDoneResponse.StatusCode);
+
+        var reopenResponse = await client.PostAsJsonAsync(
+            $"/api/TaskItem/{createItemResult.Value}/status",
+            new { Status = TaskStatus.InProgress });
+
+        Assert.Equal(HttpStatusCode.OK, reopenResponse.StatusCode);
+
+        var getResponse = await client.GetFromJsonAsync<TaskItemResponse>($"/api/TaskItem/{createItemResult.Value}");
+
+        Assert.NotNull(getResponse);
+        Assert.Equal(TaskStatus.InProgress, getResponse.Status);
+    }
+
     [Fact]
     public async Task UpdateStatus_Endpoint_ShouldChangeStatusEndToEnd()
     {
@@ -330,6 +388,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         Assert.Equal(selectedItemResult.Value, boardItems[0].Id);
         Assert.Equal("Selected task", boardItems[0].Title);
         Assert.Equal(TaskStatus.Todo, boardItems[0].Status);
+        Assert.Equal([TaskStatus.InProgress, TaskStatus.Done, TaskStatus.Cancelled], boardItems[0].AllowedTargetStatuses);
     }
 
 }
