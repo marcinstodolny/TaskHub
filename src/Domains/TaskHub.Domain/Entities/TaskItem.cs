@@ -1,6 +1,7 @@
 ﻿using TaskHub.Domain.Abstraction;
 using TaskHub.Domain.Base;
 using TaskHub.Domain.Enums;
+using TaskHub.Domain.Policies;
 using TaskHub.Domain.ValueObjects;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
@@ -60,51 +61,24 @@ namespace TaskHub.Domain.Entities
             return Result.Success();
         }
 
-        public Result Start(DateTime nowUtc)
+        public Result UpdateStatus(TaskStatus targetStatus, DateTime nowUtc)
         {
-            switch (Status)
+            if (Status == targetStatus)
             {
-                case TaskStatus.Done or TaskStatus.Cancelled:
-                    return Result.Fail($"Cannot start a task in status {Status}.");
-                case TaskStatus.InProgress:
-                    return Result.Fail("Task is already in the requested status.");
+                return Result.Fail("Task is already in the requested status.");
             }
 
-            Status = TaskStatus.InProgress;
+            if (!TaskStatusTransitionPolicy.CanTransition(Status, targetStatus))
+            {
+                return Result.Fail($"Cannot move task from {Status} to {targetStatus}.");
+            }
+
+            Status = targetStatus;
             UpdatedAt = nowUtc;
             return Result.Success();
         }
 
-
-        public Result Complete(DateTime nowUtc)
-        {
-            switch (Status)
-            {
-                case TaskStatus.Cancelled:
-                    return Result.Fail("Cannot complete a cancelled task.");
-                case TaskStatus.Done:
-                    return Result.Fail("Task is already in the requested status.");
-            }
-
-            Status = TaskStatus.Done;
-            UpdatedAt = nowUtc;
-            return Result.Success();
-        }
-
-
-        public Result Cancel(DateTime nowUtc)
-        {
-            switch (Status)
-            {
-                case TaskStatus.Done:
-                    return Result.Fail("Cannot cancel a completed task.");
-                case TaskStatus.Cancelled:
-                    return Result.Fail("Task is already in the requested status.");
-            }
-
-            Status = TaskStatus.Cancelled;
-            UpdatedAt = nowUtc;
-            return Result.Success();
-        }
+        public IReadOnlyCollection<TaskStatus> GetAllowedTargetStatuses() =>
+            TaskStatusTransitionPolicy.GetAllowedTargetStatuses(Status);
     }
 }

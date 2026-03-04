@@ -1,8 +1,8 @@
 ﻿using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Base.Response;
 using TaskHub.Application.Features.TaskItem.Response;
-using TaskHub.Application.Response;
 using TaskHub.Domain.Base;
 
 namespace TaskHub.Application.Features.TaskItem.Queries;

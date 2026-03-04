@@ -1,5 +1,5 @@
-﻿using TaskHub.Application.Features.TaskList.Response;
-using TaskHub.Application.Response;
+﻿using TaskHub.Application.Base.Response;
+using TaskHub.Application.Features.TaskList.Response;
 
 namespace TaskHub.Application.abstraction.Repository.Query
 {

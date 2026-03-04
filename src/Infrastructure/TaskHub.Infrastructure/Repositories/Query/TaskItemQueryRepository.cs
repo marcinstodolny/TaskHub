@@ -2,8 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Base.Response;
 using TaskHub.Application.Features.TaskItem.Response;
-using TaskHub.Application.Response;
 using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Repositories.Query
@@ -75,6 +75,32 @@ namespace TaskHub.Infrastructure.Repositories.Query
                 TotalPageCount = (int)Math.Ceiling(totalItemCount / (double)count),
                 Items = items
             };
+        }
+
+        public async Task<IReadOnlyCollection<TaskItemResponse>> GetByTaskListIdAsync(Guid taskListId, CancellationToken ct = default)
+        {
+            var connection = db.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open)
+            {
+                await connection.OpenAsync(ct);
+            }
+
+            const string sql = """
+                               SELECT
+                                   ti.Id,
+                                   ti.TaskListId,
+                                   ti.Title,
+                                   ti.Description,
+                                   ti.Priority,
+                                   ti.Status
+                               FROM task_items ti
+                               WHERE ti.TaskListId = @TaskListId
+                               ORDER BY ti.Title;
+                               """;
+
+            var command = new CommandDefinition(sql, new { TaskListId = taskListId }, cancellationToken: ct);
+            var items = await connection.QueryAsync<TaskItemResponse>(command);
+            return items.ToList();
         }
     }
 }
