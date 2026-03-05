@@ -1,5 +1,11 @@
 .task-board-toolbar {
-    max-width: 360px;
+    max-width: 860px;
+}
+
+.task-list-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) auto auto;
+    gap: 0.5rem;
 }
 
 .task-board-grid {
