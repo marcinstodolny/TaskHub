@@ -5,6 +5,7 @@
 @using TaskHub.Web.ApiClient.Contracts
 @using TaskStatus = TaskHub.Domain.Enums.TaskStatus
 @inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Task Board</PageTitle>
 
@@ -18,7 +19,7 @@
                      class="form-select"
                      @bind-Value="_selectedTaskListId"
                      @bind-Value:after="OnSelectedTaskListChangedAsync"
-                     disabled="@_isLoadingLists">
+                     disabled="@(_isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">
             @if (_taskLists.Count == 0)
             {
                 <option value="">No task lists available</option>
@@ -32,8 +33,9 @@
             }
         </InputSelect>
 
-        <button type="button" class="btn btn-outline-secondary" @onclick="BeginRenameTaskList" disabled="@(_selectedTaskListId is null)">Rename list</button>
-        <button type="button" class="btn btn-outline-primary" @onclick="BeginCreateTaskList">New list</button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="BeginRenameTaskList" disabled="@(_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Rename list</button>
+        <button type="button" class="btn btn-outline-danger" @onclick="OnDeleteTaskListAsync" disabled="@(_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Delete list</button>
+        <button type="button" class="btn btn-outline-primary" @onclick="BeginCreateTaskList" disabled="@(_isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">New list</button>
     </div>
 </div>
 
@@ -47,11 +49,11 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-md-8">
                         <label class="form-label" for="taskListTitle">Title</label>
-                        <InputText id="taskListTitle" class="form-control" @bind-Value="_taskListForm.Title" />
+                        <InputText id="taskListTitle" class="form-control" @bind-Value="_taskListForm.Title" disabled="@(_isSubmittingTaskList || _isDeletingTaskList)" />
                     </div>
                     <div class="col-md-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary" disabled="@_isSubmittingTaskList">Save</button>
-                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelTaskListForm" disabled="@_isSubmittingTaskList">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingTaskList || _isDeletingTaskList)">Save</button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelTaskListForm" disabled="@(_isSubmittingTaskList || _isDeletingTaskList)">Cancel</button>
                     </div>
                 </div>
             </EditForm>
@@ -69,15 +71,15 @@
                 <div class="row g-2">
                     <div class="col-md-4">
                         <label class="form-label" for="taskTitle">Title</label>
-                        <InputText id="taskTitle" class="form-control" @bind-Value="_taskForm.Title" />
+                        <InputText id="taskTitle" class="form-control" @bind-Value="_taskForm.Title" disabled="@(_isSubmittingTask || _isDeletingTaskList)" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="taskDescription">Description</label>
-                        <InputText id="taskDescription" class="form-control" @bind-Value="_taskForm.Description" />
+                        <InputText id="taskDescription" class="form-control" @bind-Value="_taskForm.Description" disabled="@(_isSubmittingTask || _isDeletingTaskList)" />
                     </div>
                     <div class="col-md-2">
                         <label class="form-label" for="taskPriority">Priority</label>
-                        <InputSelect id="taskPriority" class="form-select" @bind-Value="_taskForm.Priority">
+                        <InputSelect id="taskPriority" class="form-select" @bind-Value="_taskForm.Priority" disabled="@(_isSubmittingTask || _isDeletingTaskList)">
                             @foreach (var priority in Priorities)
                             {
                                 <option value="@priority">@priority</option>
@@ -85,10 +87,10 @@
                         </InputSelect>
                     </div>
                     <div class="col-md-2 d-flex gap-2 align-items-end">
-                        <button type="submit" class="btn btn-success" disabled="@_isSubmittingTask">@(_editingTaskId is null ? "Add" : "Save")</button>
+                        <button type="submit" class="btn btn-success" disabled="@(_isSubmittingTask || _isDeletingTaskList)">@(_editingTaskId is null ? "Add" : "Save")</button>
                         @if (_editingTaskId is not null)
                         {
-                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelTaskEdit" disabled="@_isSubmittingTask">Cancel</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelTaskEdit" disabled="@(_isSubmittingTask || _isDeletingTaskList)">Cancel</button>
                         }
                     </div>
                 </div>
@@ -118,7 +120,7 @@ else
             <section class="task-board-column">
                 <header class="task-board-column-header">
                     <h2>@ToStatusLabel(status)</h2>
-                    <span class="badge text-bg-secondary">@GetCountByStatus(status)</span>
+                    <span class="badge count-badge @GetCountCssClass(status)">@GetCountByStatus(status)</span>
                 </header>
 
                 <div class="task-board-column-content">
@@ -127,7 +129,7 @@ else
                         <article class="task-card">
                             <div class="d-flex justify-content-between align-items-start gap-2">
                                 <strong>@task.Title</strong>
-                                <span class="badge @GetStatusBadgeClass(task.Status)">@ToStatusLabel(task.Status)</span>
+                                <span class="badge status-badge @GetStatusCssClass(task.Status)">@ToStatusLabel(task.Status)</span>
                             </div>
 
                             @if (!string.IsNullOrWhiteSpace(task.Description))
@@ -145,7 +147,7 @@ else
                                              Value="task.Status"
                                              ValueChanged="targetStatus => OnTaskStatusChangedAsync(task, targetStatus)"
                                              ValueExpression="() => task.Status"
-                                             disabled="@IsTaskUpdating(task.Id)">
+                                             disabled="@(IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))">
                                     <option value="@task.Status">Select status</option>
                                     @foreach (var targetStatus in task.AllowedTargetStatuses)
                                     {
@@ -154,7 +156,10 @@ else
                                 </InputSelect>
                             </div>
 
-                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => BeginTaskEdit(task)">Edit task</button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => BeginTaskEdit(task)" disabled="@(IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))">Edit task</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => OnDeleteTaskAsync(task.Id)" disabled="@(IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))">Delete</button>
+                            </div>
                         </article>
                     }
                 </div>
@@ -181,6 +186,7 @@ else
 
     private readonly JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
     private readonly HashSet<Guid> _updatingTaskIds = [];
+    private readonly HashSet<Guid> _deletingTaskIds = [];
 
     private List<TaskListLightDto> _taskLists = [];
     private List<TaskCardDto> _tasks = [];
@@ -196,6 +202,7 @@ else
     private bool _isRenamingTaskList;
     private bool _isSubmittingTaskList;
     private bool _isSubmittingTask;
+    private bool _isDeletingTaskList;
 
     protected override async Task OnInitializedAsync() => await LoadTaskListsAsync();
 
@@ -279,6 +286,11 @@ else
 
     private void BeginCreateTaskList()
     {
+        if (_isSubmittingTaskList || _isDeletingTaskList)
+        {
+            return;
+        }
+
         _isCreatingTaskList = true;
         _isRenamingTaskList = false;
         _taskListForm.Title = string.Empty;
@@ -286,7 +298,7 @@ else
 
     private void BeginRenameTaskList()
     {
-        if (_selectedTaskListId is null)
+        if (_selectedTaskListId is null || _isSubmittingTaskList || _isDeletingTaskList)
         {
             return;
         }
@@ -358,6 +370,51 @@ else
         }
     }
 
+    private async Task OnDeleteTaskListAsync()
+    {
+        if (_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this task list?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _isDeletingTaskList = true;
+        _errorMessage = null;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("TaskHubApi");
+            var taskListId = _selectedTaskListId.Value;
+            var response = await client.DeleteAsync($"/api/TaskList/{taskListId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to delete task list.");
+                return;
+            }
+
+            CancelTaskListForm();
+            CancelTaskEdit();
+            _selectedTaskListId = null;
+            await LoadTaskListsAsync();
+            _selectedTaskListId ??= _taskLists.FirstOrDefault()?.Id;
+            await LoadBoardAsync();
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isDeletingTaskList = false;
+        }
+    }
+
     private void BeginTaskEdit(TaskCardDto task)
     {
         _editingTaskId = task.Id;
@@ -376,7 +433,7 @@ else
 
     private async Task OnTaskFormSubmittedAsync()
     {
-        if (_selectedTaskListId is null)
+        if (_selectedTaskListId is null || _isDeletingTaskList)
         {
             return;
         }
@@ -428,7 +485,7 @@ else
 
     private async Task OnTaskStatusChangedAsync(TaskCardDto task, TaskStatus targetStatus)
     {
-        if (task.Status == targetStatus || IsTaskUpdating(task.Id))
+        if (task.Status == targetStatus || IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))
         {
             return;
         }
@@ -463,7 +520,52 @@ else
         }
     }
 
+    private async Task OnDeleteTaskAsync(Guid taskId)
+    {
+        if (IsTaskUpdating(taskId) || IsTaskDeleting(taskId))
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this task?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _deletingTaskIds.Add(taskId);
+        _errorMessage = null;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("TaskHubApi");
+            var response = await client.DeleteAsync($"/api/TaskItem/{taskId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to delete task.");
+                return;
+            }
+
+            if (_editingTaskId == taskId)
+            {
+                CancelTaskEdit();
+            }
+
+            await LoadBoardAsync();
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _deletingTaskIds.Remove(taskId);
+        }
+    }
+
     private bool IsTaskUpdating(Guid taskId) => _updatingTaskIds.Contains(taskId);
+    private bool IsTaskDeleting(Guid taskId) => _deletingTaskIds.Contains(taskId);
 
     private int GetCountByStatus(TaskStatus status) => _tasks.Count(task => task.Status == status);
 
@@ -476,14 +578,16 @@ else
         _ => status.ToString()
     };
 
-    private static string GetStatusBadgeClass(TaskStatus status) => status switch
+    private static string GetStatusCssClass(TaskStatus status) => status switch
     {
-        TaskStatus.Todo => "text-bg-secondary",
-        TaskStatus.InProgress => "text-bg-primary",
-        TaskStatus.Done => "text-bg-success",
-        TaskStatus.Cancelled => "text-bg-dark",
-        _ => "text-bg-light"
+        TaskStatus.Todo => "status-todo",
+        TaskStatus.InProgress => "status-inprogress",
+        TaskStatus.Done => "status-done",
+        TaskStatus.Cancelled => "status-cancelled",
+        _ => "status-todo"
     };
+
+    private static string GetCountCssClass(TaskStatus status) => GetStatusCssClass(status);
 
     private async Task<string> GetErrorMessageAsync(HttpResponseMessage response, string fallbackMessage)
     {
