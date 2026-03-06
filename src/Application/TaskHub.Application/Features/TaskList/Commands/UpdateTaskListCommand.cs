@@ -2,43 +2,43 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.Features.TaskList.Response;
+using TaskHub.Application.Features.TaskList.ReadModels;
 using TaskHub.Domain.Base;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Features.TaskList.Commands;
 
-public sealed record UpdateTaskListCommand(Guid TaskListId, string Title) : IRequest<Result<TaskListResponse>>;
+public sealed record UpdateTaskListCommand(Guid TaskListId, string Title) : IRequest<Result<TaskListReadModel>>;
 
 public sealed class UpdateTaskListCommandHandler(
     IUnitOfWork unitOfWork,
     ITaskListCommandRepository taskListCommandRepository)
-    : IRequestHandler<UpdateTaskListCommand, Result<TaskListResponse>>
+    : IRequestHandler<UpdateTaskListCommand, Result<TaskListReadModel>>
 {
-    public async Task<Result<TaskListResponse>> Handle(UpdateTaskListCommand request, CancellationToken ct)
+    public async Task<Result<TaskListReadModel>> Handle(UpdateTaskListCommand request, CancellationToken ct)
     {
         var getResult = await taskListCommandRepository.GetByIdAsync(request.TaskListId, ct);
         if (getResult.IsFailed)
         {
-            return Result.Fail<TaskListResponse>(getResult.Errors);
+            return Result.Fail<TaskListReadModel>(getResult.Errors);
         }
 
         var titleResult = TaskListTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
-            return Result.Fail<TaskListResponse>(titleResult.Errors);
+            return Result.Fail<TaskListReadModel>(titleResult.Errors);
         }
 
         var taskList = getResult.Value;
         var renameResult = taskList.Rename(titleResult.Value);
         if (renameResult.IsFailed)
         {
-            return Result.Fail<TaskListResponse>(renameResult.Errors);
+            return Result.Fail<TaskListReadModel>(renameResult.Errors);
         }
 
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result.Success(new TaskListResponse { Id = taskList.Id, Title = taskList.Title.Value });
+        return Result.Success(new TaskListReadModel { Id = taskList.Id, Title = taskList.Title.Value });
     }
 }
 

@@ -2,7 +2,7 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Application.Features.TaskItem.ReadModels;
 using TaskHub.Domain.Base;
 using TaskHub.Domain.ValueObjects;
 using TaskPriority = TaskHub.Domain.Enums.TaskPriority;
@@ -13,26 +13,26 @@ public sealed record UpdateTaskItemCommand(
     Guid TaskItemId,
     string Title,
     string? Description,
-    TaskPriority Priority) : IRequest<Result<TaskItemResponse>>;
+    TaskPriority Priority) : IRequest<Result<TaskItemReadModel>>;
 
 public sealed class UpdateTaskItemCommandHandler(
     IUnitOfWork unitOfWork,
     ITaskItemCommandRepository taskItemCommandRepository,
     IDateTimeProvider dateTimeProvider)
-    : IRequestHandler<UpdateTaskItemCommand, Result<TaskItemResponse>>
+    : IRequestHandler<UpdateTaskItemCommand, Result<TaskItemReadModel>>
 {
-    public async Task<Result<TaskItemResponse>> Handle(UpdateTaskItemCommand request, CancellationToken ct)
+    public async Task<Result<TaskItemReadModel>> Handle(UpdateTaskItemCommand request, CancellationToken ct)
     {
         var getResult = await taskItemCommandRepository.GetByIdAsync(request.TaskItemId, ct);
         if (getResult.IsFailed)
         {
-            return Result.Fail<TaskItemResponse>(getResult.Errors);
+            return Result.Fail<TaskItemReadModel>(getResult.Errors);
         }
 
         var titleResult = TaskItemTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
-            return Result.Fail<TaskItemResponse>(titleResult.Errors);
+            return Result.Fail<TaskItemReadModel>(titleResult.Errors);
         }
 
         TaskDescription? description = null;
@@ -41,7 +41,7 @@ public sealed class UpdateTaskItemCommandHandler(
             var descriptionResult = TaskDescription.Create(request.Description);
             if (descriptionResult.IsFailed)
             {
-                return Result.Fail<TaskItemResponse>(descriptionResult.Errors);
+                return Result.Fail<TaskItemReadModel>(descriptionResult.Errors);
             }
 
             description = descriptionResult.Value;
@@ -51,12 +51,12 @@ public sealed class UpdateTaskItemCommandHandler(
         var updateResult = taskItem.Update(titleResult.Value, description, request.Priority, dateTimeProvider.UtcNow());
         if (updateResult.IsFailed)
         {
-            return Result.Fail<TaskItemResponse>(updateResult.Errors);
+            return Result.Fail<TaskItemReadModel>(updateResult.Errors);
         }
 
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result.Success(new TaskItemResponse
+        return Result.Success(new TaskItemReadModel
         {
             Id = taskItem.Id,
             TaskListId = taskItem.TaskListId,

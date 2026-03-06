@@ -1,19 +1,19 @@
 ﻿using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction.Repository.Query;
-using TaskHub.Application.Base.Response;
-using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Application.Common.Pagination;
+using TaskHub.Application.Features.TaskItem.ReadModels;
 using TaskHub.Domain.Base;
 
 namespace TaskHub.Application.Features.TaskItem.Queries;
 
 public sealed record GetTaskItemsQuery(int Page = 1, int Count = 10)
-    : IRequest<Result<PaginatedResponse<TaskItemResponse>>>;
+    : IRequest<Result<PagedResult<TaskItemReadModel>>>;
 
 public sealed class GetTaskItemsQueryHandler(ITaskItemQueryRepository taskItemQueryRepository)
-    : IRequestHandler<GetTaskItemsQuery, Result<PaginatedResponse<TaskItemResponse>>>
+    : IRequestHandler<GetTaskItemsQuery, Result<PagedResult<TaskItemReadModel>>>
 {
-    public async Task<Result<PaginatedResponse<TaskItemResponse>>> Handle(GetTaskItemsQuery request, CancellationToken ct)
+    public async Task<Result<PagedResult<TaskItemReadModel>>> Handle(GetTaskItemsQuery request, CancellationToken ct)
     {
         var items = await taskItemQueryRepository.GetAllAsync(request.Page, request.Count, ct);
         return Result.Success(items);

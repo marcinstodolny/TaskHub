@@ -1,5 +1,5 @@
-using TaskItemApplicationResponse = TaskHub.Application.Features.TaskItem.Response.TaskItemResponse;
-using TaskListApplicationResponse = TaskHub.Application.Features.TaskList.Response.TaskListResponse;
+using TaskItemReadModel = TaskHub.Application.Features.TaskItem.ReadModels.TaskItemReadModel;
+using TaskListReadModel = TaskHub.Application.Features.TaskList.ReadModels.TaskListReadModel;
 using TaskHub.Contracts.Common;
 using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
@@ -8,7 +8,7 @@ namespace TaskHub.Api.Controllers;
 
 internal static class ContractMappings
 {
-    public static TaskCardResponse ToContract(this TaskItemApplicationResponse source) => new()
+    public static TaskCardResponse ToContract(this TaskItemReadModel source) => new()
     {
         Id = source.Id,
         TaskListId = source.TaskListId,
@@ -19,24 +19,24 @@ internal static class ContractMappings
         AllowedTargetStatuses = source.AllowedTargetStatuses
     };
 
-    public static TaskItemLightResponse ToLightContract(this TaskItemApplicationResponse source) => new()
+    public static TaskItemLightResponse ToLightContract(this TaskItemReadModel source) => new()
     {
         Id = source.Id,
         TaskListId = source.TaskListId,
         Title = source.Title
     };
 
-    public static TaskListLightResponse ToContract(this TaskListApplicationResponse source) => new()
+    public static TaskListLightResponse ToContract(this TaskListReadModel source) => new()
     {
         Id = source.Id,
         Title = source.Title
     };
 
-    public static PaginatedResponse<TTarget> Map<TSource, TTarget>(this TaskHub.Application.Base.Response.PaginatedResponse<TSource> source, Func<TSource, TTarget> map)
+    public static PaginatedResponse<TTarget> Map<TSource, TTarget>(this Application.Common.Pagination.PagedResult<TSource> source, Func<TSource, TTarget> map)
         => new()
         {
             Items = source.Items.Select(map).ToList(),
-            CurrentPage = source.CurrentPage,
-            TotalPageCount = source.TotalPageCount
+            CurrentPage = source.PageNumber,
+            TotalPageCount = source.TotalPages
         };
 }

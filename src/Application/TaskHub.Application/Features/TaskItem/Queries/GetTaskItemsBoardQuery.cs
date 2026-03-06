@@ -1,18 +1,18 @@
 using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction.Repository.Query;
-using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Application.Features.TaskItem.ReadModels;
 using TaskHub.Domain.Base;
 using TaskHub.Domain.Policies;
 
 namespace TaskHub.Application.Features.TaskItem.Queries;
 
-public sealed record GetTaskItemsBoardQuery(Guid TaskListId) : IRequest<Result<IReadOnlyCollection<TaskItemResponse>>>;
+public sealed record GetTaskItemsBoardQuery(Guid TaskListId) : IRequest<Result<IReadOnlyCollection<TaskItemReadModel>>>;
 
 public sealed class GetTaskItemsBoardQueryHandler(ITaskItemQueryRepository taskItemQueryRepository)
-    : IRequestHandler<GetTaskItemsBoardQuery, Result<IReadOnlyCollection<TaskItemResponse>>>
+    : IRequestHandler<GetTaskItemsBoardQuery, Result<IReadOnlyCollection<TaskItemReadModel>>>
 {
-    public async Task<Result<IReadOnlyCollection<TaskItemResponse>>> Handle(GetTaskItemsBoardQuery request, CancellationToken ct)
+    public async Task<Result<IReadOnlyCollection<TaskItemReadModel>>> Handle(GetTaskItemsBoardQuery request, CancellationToken ct)
     {
         var tasks = await taskItemQueryRepository.GetByTaskListIdAsync(request.TaskListId, ct);
 
