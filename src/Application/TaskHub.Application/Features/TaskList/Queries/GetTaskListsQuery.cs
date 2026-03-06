@@ -7,11 +7,11 @@ using TaskHub.Domain.Base;
 
 namespace TaskHub.Application.Features.TaskList.Queries
 {
-    public sealed record GetTaskListsQuery(int Page = 1, int Count = 10) : IRequest<Result<PagedResult<TaskListReadModel>>>;
+    public sealed record GetTaskListsQuery(int Page = 1, int Count = 10) : IRequest<Result<PagedResult<TaskListSummaryReadModel>>>;
 
-    public sealed class GetTaskListsQueryHandler(ITaskListQueryRepository taskListQueryRepository) : IRequestHandler<GetTaskListsQuery, Result<PagedResult<TaskListReadModel>>>
+    public sealed class GetTaskListsQueryHandler(ITaskListQueryRepository taskListQueryRepository) : IRequestHandler<GetTaskListsQuery, Result<PagedResult<TaskListSummaryReadModel>>>
     {
-        public async Task<Result<PagedResult<TaskListReadModel>>> Handle(GetTaskListsQuery request, CancellationToken ct)
+        public async Task<Result<PagedResult<TaskListSummaryReadModel>>> Handle(GetTaskListsQuery request, CancellationToken ct)
         {
             var list = await taskListQueryRepository.GetAllAsync(request.Page, request.Count, ct);
             return Result.Success(list);

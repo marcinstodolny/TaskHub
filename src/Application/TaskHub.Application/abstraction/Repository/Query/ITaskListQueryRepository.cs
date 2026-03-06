@@ -5,7 +5,7 @@ namespace TaskHub.Application.abstraction.Repository.Query
 {
     public interface ITaskListQueryRepository
     {
-        Task<PagedResult<TaskListReadModel>> GetAllAsync(int page, int count, CancellationToken ct);
-        Task<TaskListReadModel?> GetByIdAsync(Guid listId, CancellationToken ct);
+        Task<PagedResult<TaskListSummaryReadModel>> GetAllAsync(int page, int count, CancellationToken ct);
+        Task<TaskListDetailsReadModel?> GetByIdAsync(Guid listId, CancellationToken ct);
     }
 }
