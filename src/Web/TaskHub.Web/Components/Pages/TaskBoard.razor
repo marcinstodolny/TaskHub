@@ -1,9 +1,11 @@
 @page "/task-board"
 @rendermode InteractiveServer
 @using System.Text.Json
+@using TaskHub.Domain.Enums
 @using TaskHub.Web.ApiClient.Contracts
 @using TaskStatus = TaskHub.Domain.Enums.TaskStatus
 @inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Task Board</PageTitle>
 
@@ -11,25 +13,91 @@
 
 <div class="task-board-toolbar mb-3">
     <label for="taskListSelect" class="form-label">Task List</label>
-    <InputSelect TValue="Guid?"
-                 id="taskListSelect"
-                 class="form-select"
-                 @bind-Value="_selectedTaskListId"
-                 @bind-Value:after="OnSelectedTaskListChangedAsync"
-                 disabled="@_isLoadingLists">
-        @if (_taskLists.Count == 0)
-        {
-            <option value="">No task lists available</option>
-        }
-        else
-        {
-            @foreach (var taskList in _taskLists)
+    <div class="task-list-row">
+        <InputSelect TValue="Guid?"
+                     id="taskListSelect"
+                     class="form-select"
+                     @bind-Value="_selectedTaskListId"
+                     @bind-Value:after="OnSelectedTaskListChangedAsync"
+                     disabled="@(_isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">
+            @if (_taskLists.Count == 0)
             {
-                <option value="@taskList.Id">@taskList.Title</option>
+                <option value="">No task lists available</option>
             }
-        }
-    </InputSelect>
+            else
+            {
+                @foreach (var taskList in _taskLists)
+                {
+                    <option value="@taskList.Id">@taskList.Title</option>
+                }
+            }
+        </InputSelect>
+
+        <button type="button" class="btn btn-outline-secondary" @onclick="BeginRenameTaskList" disabled="@(_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Rename list</button>
+        <button type="button" class="btn btn-outline-danger" @onclick="OnDeleteTaskListAsync" disabled="@(_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Delete list</button>
+        <button type="button" class="btn btn-outline-primary" @onclick="BeginCreateTaskList" disabled="@(_isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">New list</button>
+    </div>
 </div>
+
+@if (_isCreatingTaskList || _isRenamingTaskList)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h5">@(_isCreatingTaskList ? "Create task list" : "Rename task list")</h2>
+            <EditForm Model="_taskListForm" OnValidSubmit="OnTaskListFormSubmittedAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label" for="taskListTitle">Title</label>
+                        <InputText id="taskListTitle" class="form-control" @bind-Value="_taskListForm.Title" disabled="@(_isSubmittingTaskList || _isDeletingTaskList)" />
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="@(_isSubmittingTaskList || _isDeletingTaskList)">Save</button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelTaskListForm" disabled="@(_isSubmittingTaskList || _isDeletingTaskList)">Cancel</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (_selectedTaskListId is not null)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h5">@(_editingTaskId is null ? "Add task" : "Edit task")</h2>
+            <EditForm Model="_taskForm" OnValidSubmit="OnTaskFormSubmittedAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label" for="taskTitle">Title</label>
+                        <InputText id="taskTitle" class="form-control" @bind-Value="_taskForm.Title" disabled="@(_isSubmittingTask || _isDeletingTaskList)" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="taskDescription">Description</label>
+                        <InputText id="taskDescription" class="form-control" @bind-Value="_taskForm.Description" disabled="@(_isSubmittingTask || _isDeletingTaskList)" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="taskPriority">Priority</label>
+                        <InputSelect id="taskPriority" class="form-select" @bind-Value="_taskForm.Priority" disabled="@(_isSubmittingTask || _isDeletingTaskList)">
+                            @foreach (var priority in Priorities)
+                            {
+                                <option value="@priority">@priority</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-2 d-flex gap-2 align-items-end">
+                        <button type="submit" class="btn btn-success" disabled="@(_isSubmittingTask || _isDeletingTaskList)">@(_editingTaskId is null ? "Add" : "Save")</button>
+                        @if (_editingTaskId is not null)
+                        {
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CancelTaskEdit" disabled="@(_isSubmittingTask || _isDeletingTaskList)">Cancel</button>
+                        }
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
@@ -52,7 +120,7 @@ else
             <section class="task-board-column">
                 <header class="task-board-column-header">
                     <h2>@ToStatusLabel(status)</h2>
-                    <span class="badge text-bg-secondary">@GetCountByStatus(status)</span>
+                    <span class="badge count-badge @GetCountCssClass(status)">@GetCountByStatus(status)</span>
                 </header>
 
                 <div class="task-board-column-content">
@@ -61,13 +129,15 @@ else
                         <article class="task-card">
                             <div class="d-flex justify-content-between align-items-start gap-2">
                                 <strong>@task.Title</strong>
-                                <span class="badge @GetStatusBadgeClass(task.Status)">@ToStatusLabel(task.Status)</span>
+                                <span class="badge status-badge @GetStatusCssClass(task.Status)">@ToStatusLabel(task.Status)</span>
                             </div>
 
                             @if (!string.IsNullOrWhiteSpace(task.Description))
                             {
                                 <p class="task-description">@task.Description</p>
                             }
+
+                            <small>Priority: <strong>@task.Priority</strong></small>
 
                             <div>
                                 <label class="form-label" for="@($"status-{task.Id}")">Move to</label>
@@ -77,13 +147,18 @@ else
                                              Value="task.Status"
                                              ValueChanged="targetStatus => OnTaskStatusChangedAsync(task, targetStatus)"
                                              ValueExpression="() => task.Status"
-                                             disabled="@IsTaskUpdating(task.Id)">
+                                             disabled="@(IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))">
                                     <option value="@task.Status">Select status</option>
                                     @foreach (var targetStatus in task.AllowedTargetStatuses)
                                     {
                                         <option value="@targetStatus">@ToStatusLabel(targetStatus)</option>
                                     }
                                 </InputSelect>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => BeginTaskEdit(task)" disabled="@(IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))">Edit task</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => OnDeleteTaskAsync(task.Id)" disabled="@(IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))">Delete</button>
                             </div>
                         </article>
                     }
@@ -94,28 +169,42 @@ else
 }
 
 @code {
-    private static readonly TaskStatus[] BoardStatuses =
-    [
-        TaskStatus.Todo,
-        TaskStatus.InProgress,
-        TaskStatus.Done,
-        TaskStatus.Cancelled
-    ];
+    private sealed class TaskListFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+    }
+
+    private sealed class TaskFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public TaskPriority Priority { get; set; } = TaskPriority.Normal;
+    }
+
+    private static readonly TaskStatus[] BoardStatuses = [TaskStatus.Todo, TaskStatus.InProgress, TaskStatus.Done, TaskStatus.Cancelled];
+    private static readonly TaskPriority[] Priorities = [TaskPriority.Low, TaskPriority.Normal, TaskPriority.High, TaskPriority.Critical];
 
     private readonly JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
-
     private readonly HashSet<Guid> _updatingTaskIds = [];
+    private readonly HashSet<Guid> _deletingTaskIds = [];
+
     private List<TaskListLightDto> _taskLists = [];
     private List<TaskCardDto> _tasks = [];
+    private readonly TaskListFormModel _taskListForm = new();
+    private readonly TaskFormModel _taskForm = new();
+
     private Guid? _selectedTaskListId;
+    private Guid? _editingTaskId;
     private string? _errorMessage;
     private bool _isLoadingLists;
     private bool _isLoadingBoard;
+    private bool _isCreatingTaskList;
+    private bool _isRenamingTaskList;
+    private bool _isSubmittingTaskList;
+    private bool _isSubmittingTask;
+    private bool _isDeletingTaskList;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadTaskListsAsync();
-    }
+    protected override async Task OnInitializedAsync() => await LoadTaskListsAsync();
 
     private async Task LoadTaskListsAsync()
     {
@@ -126,7 +215,6 @@ else
         {
             using var client = HttpClientFactory.CreateClient("TaskHubApi");
             var response = await client.GetAsync("/api/TaskList?page=1&count=100");
-
             if (!response.IsSuccessStatusCode)
             {
                 _errorMessage = await GetErrorMessageAsync(response, "Unable to load task lists.");
@@ -135,8 +223,7 @@ else
 
             var listResponse = await response.Content.ReadFromJsonAsync<PaginatedResponseDto<TaskListLightDto>>(_serializerOptions);
             _taskLists = listResponse?.Items ?? [];
-
-            _selectedTaskListId = _taskLists.Count > 0 ? _taskLists[0].Id : null;
+            _selectedTaskListId ??= _taskLists.FirstOrDefault()?.Id;
 
             if (_selectedTaskListId is not null)
             {
@@ -159,12 +246,7 @@ else
 
     private async Task OnSelectedTaskListChangedAsync()
     {
-        if (_selectedTaskListId is null)
-        {
-            _tasks = [];
-            return;
-        }
-
+        CancelTaskEdit();
         await LoadBoardAsync();
     }
 
@@ -202,9 +284,208 @@ else
         }
     }
 
+    private void BeginCreateTaskList()
+    {
+        if (_isSubmittingTaskList || _isDeletingTaskList)
+        {
+            return;
+        }
+
+        _isCreatingTaskList = true;
+        _isRenamingTaskList = false;
+        _taskListForm.Title = string.Empty;
+    }
+
+    private void BeginRenameTaskList()
+    {
+        if (_selectedTaskListId is null || _isSubmittingTaskList || _isDeletingTaskList)
+        {
+            return;
+        }
+
+        _isRenamingTaskList = true;
+        _isCreatingTaskList = false;
+        _taskListForm.Title = _taskLists.FirstOrDefault(x => x.Id == _selectedTaskListId)?.Title ?? string.Empty;
+    }
+
+    private void CancelTaskListForm()
+    {
+        _isCreatingTaskList = false;
+        _isRenamingTaskList = false;
+        _taskListForm.Title = string.Empty;
+    }
+
+    private async Task OnTaskListFormSubmittedAsync()
+    {
+        var title = _taskListForm.Title?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            _errorMessage = "Task list title cannot be empty.";
+            return;
+        }
+
+        _isSubmittingTaskList = true;
+        _errorMessage = null;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("TaskHubApi");
+            HttpResponseMessage response;
+
+            if (_isCreatingTaskList)
+            {
+                response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListDto(title));
+            }
+            else if (_isRenamingTaskList && _selectedTaskListId is not null)
+            {
+                response = await client.PutAsJsonAsync($"/api/TaskList/{_selectedTaskListId.Value}", new UpdateTaskListDto(title));
+            }
+            else
+            {
+                return;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to save task list.");
+                return;
+            }
+
+            var taskList = await response.Content.ReadFromJsonAsync<TaskListLightDto>(_serializerOptions);
+            if (taskList is not null)
+            {
+                _selectedTaskListId = taskList.Id;
+            }
+
+            CancelTaskListForm();
+            await LoadTaskListsAsync();
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isSubmittingTaskList = false;
+        }
+    }
+
+    private async Task OnDeleteTaskListAsync()
+    {
+        if (_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this task list?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _isDeletingTaskList = true;
+        _errorMessage = null;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("TaskHubApi");
+            var taskListId = _selectedTaskListId.Value;
+            var response = await client.DeleteAsync($"/api/TaskList/{taskListId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to delete task list.");
+                return;
+            }
+
+            CancelTaskListForm();
+            CancelTaskEdit();
+            _selectedTaskListId = null;
+            await LoadTaskListsAsync();
+            _selectedTaskListId ??= _taskLists.FirstOrDefault()?.Id;
+            await LoadBoardAsync();
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isDeletingTaskList = false;
+        }
+    }
+
+    private void BeginTaskEdit(TaskCardDto task)
+    {
+        _editingTaskId = task.Id;
+        _taskForm.Title = task.Title;
+        _taskForm.Description = task.Description;
+        _taskForm.Priority = task.Priority;
+    }
+
+    private void CancelTaskEdit()
+    {
+        _editingTaskId = null;
+        _taskForm.Title = string.Empty;
+        _taskForm.Description = string.Empty;
+        _taskForm.Priority = TaskPriority.Normal;
+    }
+
+    private async Task OnTaskFormSubmittedAsync()
+    {
+        if (_selectedTaskListId is null || _isDeletingTaskList)
+        {
+            return;
+        }
+
+        var title = _taskForm.Title?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            _errorMessage = "Task title cannot be empty.";
+            return;
+        }
+
+        _isSubmittingTask = true;
+        _errorMessage = null;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("TaskHubApi");
+            HttpResponseMessage response;
+
+            if (_editingTaskId is null)
+            {
+                var createDto = new CreateTaskItemDto(_selectedTaskListId.Value, title, _taskForm.Description, _taskForm.Priority);
+                response = await client.PostAsJsonAsync("/api/TaskItem", createDto);
+            }
+            else
+            {
+                var updateDto = new UpdateTaskItemDto(title, _taskForm.Description, _taskForm.Priority);
+                response = await client.PutAsJsonAsync($"/api/TaskItem/{_editingTaskId.Value}", updateDto);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to save task.");
+                return;
+            }
+
+            CancelTaskEdit();
+            await LoadBoardAsync();
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isSubmittingTask = false;
+        }
+    }
+
     private async Task OnTaskStatusChangedAsync(TaskCardDto task, TaskStatus targetStatus)
     {
-        if (task.Status == targetStatus || IsTaskUpdating(task.Id))
+        if (task.Status == targetStatus || IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))
         {
             return;
         }
@@ -239,7 +520,52 @@ else
         }
     }
 
+    private async Task OnDeleteTaskAsync(Guid taskId)
+    {
+        if (IsTaskUpdating(taskId) || IsTaskDeleting(taskId))
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this task?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _deletingTaskIds.Add(taskId);
+        _errorMessage = null;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("TaskHubApi");
+            var response = await client.DeleteAsync($"/api/TaskItem/{taskId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = await GetErrorMessageAsync(response, "Unable to delete task.");
+                return;
+            }
+
+            if (_editingTaskId == taskId)
+            {
+                CancelTaskEdit();
+            }
+
+            await LoadBoardAsync();
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _deletingTaskIds.Remove(taskId);
+        }
+    }
+
     private bool IsTaskUpdating(Guid taskId) => _updatingTaskIds.Contains(taskId);
+    private bool IsTaskDeleting(Guid taskId) => _deletingTaskIds.Contains(taskId);
 
     private int GetCountByStatus(TaskStatus status) => _tasks.Count(task => task.Status == status);
 
@@ -252,14 +578,16 @@ else
         _ => status.ToString()
     };
 
-    private static string GetStatusBadgeClass(TaskStatus status) => status switch
+    private static string GetStatusCssClass(TaskStatus status) => status switch
     {
-        TaskStatus.Todo => "text-bg-secondary",
-        TaskStatus.InProgress => "text-bg-primary",
-        TaskStatus.Done => "text-bg-success",
-        TaskStatus.Cancelled => "text-bg-dark",
-        _ => "text-bg-light"
+        TaskStatus.Todo => "status-todo",
+        TaskStatus.InProgress => "status-inprogress",
+        TaskStatus.Done => "status-done",
+        TaskStatus.Cancelled => "status-cancelled",
+        _ => "status-todo"
     };
+
+    private static string GetCountCssClass(TaskStatus status) => GetStatusCssClass(status);
 
     private async Task<string> GetErrorMessageAsync(HttpResponseMessage response, string fallbackMessage)
     {
