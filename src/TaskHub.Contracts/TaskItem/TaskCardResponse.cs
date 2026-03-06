@@ -1,9 +1,9 @@
-using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 using TaskPriority = TaskHub.Domain.Enums.TaskPriority;
+using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
-namespace TaskHub.Web.ApiClient.Contracts;
+namespace TaskHub.Contracts.TaskItem;
 
-public sealed record TaskCardDto
+public sealed record TaskCardResponse
 {
     public Guid Id { get; set; }
     public Guid TaskListId { get; set; }

@@ -1,10 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using TaskHub.Application.Base.Response;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
-using TaskHub.Application.Features.TaskList.Request;
-using TaskHub.Application.Features.TaskList.Response;
+using TaskHub.Contracts.Common;
+using TaskHub.Contracts.TaskList;
 
 namespace TaskHub.Api.Controllers
 {
@@ -13,42 +12,42 @@ namespace TaskHub.Api.Controllers
     public class TaskListController(IMediator mediator) : ControllerBase
     {
         [HttpGet("{taskListId:guid}")]
-        public async Task<ActionResult<TaskListResponse>> GetTaskListById(Guid taskListId, CancellationToken ct)
+        public async Task<ActionResult<TaskListLightResponse>> GetTaskListById(Guid taskListId, CancellationToken ct)
         {
             var taskListResult = await mediator.Send(new GetTaskListByIdQuery(taskListId), ct);
 
             return taskListResult.IsFailed
                 ? this.ToProblem(taskListResult, StatusCodes.Status404NotFound, "Task list not found")
-                : Ok(taskListResult.Value);
+                : Ok(taskListResult.Value.ToContract());
         }
 
         [HttpGet]
-        public async Task<ActionResult<PaginatedResponse<TaskListResponse>>> GetTaskLists([FromQuery] GetTaskListsQuery query, CancellationToken ct)
+        public async Task<ActionResult<PaginatedResponse<TaskListLightResponse>>> GetTaskLists([FromQuery] GetTaskListsQuery query, CancellationToken ct)
         {
             var taskListsResult = await mediator.Send(query, ct);
 
             return taskListsResult.IsFailed
                 ? this.ToProblem(taskListsResult, StatusCodes.Status404NotFound, "Task lists not found")
-                : Ok(taskListsResult.Value);
+                : Ok(taskListsResult.Value.Map(list => list.ToContract()));
         }
 
         [HttpPost]
-        public async Task<ActionResult<TaskListResponse>> CreateTaskList(CreateTaskListCommand command, CancellationToken ct)
+        public async Task<ActionResult<TaskListLightResponse>> CreateTaskList([FromBody] CreateTaskListRequest request, CancellationToken ct)
         {
-            var taskListResult = await mediator.Send(command, ct);
+            var taskListResult = await mediator.Send(new CreateTaskListCommand(request.Title), ct);
 
             return taskListResult.IsFailed
                 ? this.ToProblem(taskListResult, StatusCodes.Status400BadRequest, "Unable to create task list")
-                : Ok(taskListResult.Value);
+                : Ok(taskListResult.Value.ToContract());
         }
 
         [HttpPut("{taskListId:guid}")]
-        public async Task<ActionResult<TaskListResponse>> UpdateTaskList(Guid taskListId, [FromBody] UpdateTaskListRequest request, CancellationToken ct)
+        public async Task<ActionResult<TaskListLightResponse>> UpdateTaskList(Guid taskListId, [FromBody] UpdateTaskListRequest request, CancellationToken ct)
         {
             var result = await mediator.Send(new UpdateTaskListCommand(taskListId, request.Title), ct);
             return result.IsFailed
                 ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to update task list")
-                : Ok(result.Value);
+                : Ok(result.Value.ToContract());
         }
 
         [HttpDelete("{taskListId:guid}")]
