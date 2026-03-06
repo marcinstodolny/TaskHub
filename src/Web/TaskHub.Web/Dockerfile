@@ -12,10 +12,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/Web/TaskHub.Web/TaskHub.Web.csproj", "src/Web/TaskHub.Web/"]
-COPY ["src/API/TaskHub.Api/TaskHub.Api.csproj", "src/API/TaskHub.Api/"]
-COPY ["src/Application/TaskHub.Application/TaskHub.Application.csproj", "src/Application/TaskHub.Application/"]
+COPY ["src/TaskHub.Contracts/TaskHub.Contracts.csproj", "src/TaskHub.Contracts/"]
 COPY ["src/Domains/TaskHub.Domain/TaskHub.Domain.csproj", "src/Domains/TaskHub.Domain/"]
-COPY ["src/Infrastructure/TaskHub.Infrastructure/TaskHub.Infrastructure.csproj", "src/Infrastructure/TaskHub.Infrastructure/"]
 RUN dotnet restore "./src/Web/TaskHub.Web/TaskHub.Web.csproj"
 COPY . .
 WORKDIR "/src/src/Web/TaskHub.Web"

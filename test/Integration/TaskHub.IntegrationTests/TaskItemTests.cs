@@ -2,9 +2,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using TaskHub.Contracts.TaskItem;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskItem.Queries;
-using TaskHub.Application.Features.TaskItem.Response;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
 using TaskHub.Domain.Enums;
@@ -360,7 +360,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
 
         Assert.Equal(HttpStatusCode.OK, reopenResponse.StatusCode);
 
-        var getResponse = await client.GetFromJsonAsync<TaskItemResponse>($"/api/TaskItem/{createItemResult.Value}");
+        var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createItemResult.Value}");
 
         Assert.NotNull(getResponse);
         Assert.Equal(TaskStatus.InProgress, getResponse.Status);
@@ -386,7 +386,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
 
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
 
-        var getResponse = await client.GetFromJsonAsync<TaskItemResponse>($"/api/TaskItem/{createItemResult.Value}");
+        var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createItemResult.Value}");
 
         Assert.NotNull(getResponse);
         Assert.Equal(TaskStatus.InProgress, getResponse.Status);
@@ -413,7 +413,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             TaskPriority.Low));
 
         using var client = fixture.ApiFactory.CreateClient();
-        var boardItems = await client.GetFromJsonAsync<List<TaskItemResponse>>($"/api/TaskItem/board/{selectedListResult.Value.Id}");
+        var boardItems = await client.GetFromJsonAsync<List<TaskCardResponse>>($"/api/TaskItem/board/{selectedListResult.Value.Id}");
 
         Assert.NotNull(boardItems);
         Assert.Single(boardItems);

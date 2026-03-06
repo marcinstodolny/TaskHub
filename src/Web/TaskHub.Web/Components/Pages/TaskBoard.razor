@@ -2,7 +2,9 @@
 @rendermode InteractiveServer
 @using System.Text.Json
 @using TaskHub.Domain.Enums
-@using TaskHub.Web.ApiClient.Contracts
+@using TaskHub.Contracts.Common
+@using TaskHub.Contracts.TaskItem
+@using TaskHub.Contracts.TaskList
 @using TaskStatus = TaskHub.Domain.Enums.TaskStatus
 @inject IHttpClientFactory HttpClientFactory
 @inject IJSRuntime JSRuntime
@@ -188,8 +190,8 @@ else
     private readonly HashSet<Guid> _updatingTaskIds = [];
     private readonly HashSet<Guid> _deletingTaskIds = [];
 
-    private List<TaskListLightDto> _taskLists = [];
-    private List<TaskCardDto> _tasks = [];
+    private List<TaskListLightResponse> _taskLists = [];
+    private List<TaskCardResponse> _tasks = [];
     private readonly TaskListFormModel _taskListForm = new();
     private readonly TaskFormModel _taskForm = new();
 
@@ -221,8 +223,8 @@ else
                 return;
             }
 
-            var listResponse = await response.Content.ReadFromJsonAsync<PaginatedResponseDto<TaskListLightDto>>(_serializerOptions);
-            _taskLists = listResponse?.Items ?? [];
+            var listResponse = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
+            _taskLists = listResponse?.Items?.ToList() ?? [];
             _selectedTaskListId ??= _taskLists.FirstOrDefault()?.Id;
 
             if (_selectedTaskListId is not null)
@@ -271,7 +273,7 @@ else
                 return;
             }
 
-            var boardTasks = await response.Content.ReadFromJsonAsync<List<TaskCardDto>>(_serializerOptions);
+            var boardTasks = await response.Content.ReadFromJsonAsync<List<TaskCardResponse>>(_serializerOptions);
             _tasks = boardTasks ?? [];
         }
         catch (Exception exception)
@@ -334,11 +336,11 @@ else
 
             if (_isCreatingTaskList)
             {
-                response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListDto(title));
+                response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest(title));
             }
             else if (_isRenamingTaskList && _selectedTaskListId is not null)
             {
-                response = await client.PutAsJsonAsync($"/api/TaskList/{_selectedTaskListId.Value}", new UpdateTaskListDto(title));
+                response = await client.PutAsJsonAsync($"/api/TaskList/{_selectedTaskListId.Value}", new UpdateTaskListRequest(title));
             }
             else
             {
@@ -351,7 +353,7 @@ else
                 return;
             }
 
-            var taskList = await response.Content.ReadFromJsonAsync<TaskListLightDto>(_serializerOptions);
+            var taskList = await response.Content.ReadFromJsonAsync<TaskListLightResponse>(_serializerOptions);
             if (taskList is not null)
             {
                 _selectedTaskListId = taskList.Id;
@@ -415,7 +417,7 @@ else
         }
     }
 
-    private void BeginTaskEdit(TaskCardDto task)
+    private void BeginTaskEdit(TaskCardResponse task)
     {
         _editingTaskId = task.Id;
         _taskForm.Title = task.Title;
@@ -455,12 +457,12 @@ else
 
             if (_editingTaskId is null)
             {
-                var createDto = new CreateTaskItemDto(_selectedTaskListId.Value, title, _taskForm.Description, _taskForm.Priority);
+                var createDto = new CreateTaskItemRequest(_selectedTaskListId.Value, title, _taskForm.Description, _taskForm.Priority);
                 response = await client.PostAsJsonAsync("/api/TaskItem", createDto);
             }
             else
             {
-                var updateDto = new UpdateTaskItemDto(title, _taskForm.Description, _taskForm.Priority);
+                var updateDto = new UpdateTaskItemRequest(title, _taskForm.Description, _taskForm.Priority);
                 response = await client.PutAsJsonAsync($"/api/TaskItem/{_editingTaskId.Value}", updateDto);
             }
 
@@ -483,7 +485,7 @@ else
         }
     }
 
-    private async Task OnTaskStatusChangedAsync(TaskCardDto task, TaskStatus targetStatus)
+    private async Task OnTaskStatusChangedAsync(TaskCardResponse task, TaskStatus targetStatus)
     {
         if (task.Status == targetStatus || IsTaskUpdating(task.Id) || IsTaskDeleting(task.Id))
         {
@@ -498,7 +500,7 @@ else
         try
         {
             using var client = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await client.PostAsJsonAsync($"/api/TaskItem/{task.Id}/status", new UpdateTaskStatusDto(targetStatus));
+            var response = await client.PostAsJsonAsync($"/api/TaskItem/{task.Id}/status", new UpdateTaskStatusRequest(targetStatus));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -600,7 +602,7 @@ else
 
         try
         {
-            var problem = JsonSerializer.Deserialize<ProblemDetailsDto>(responseText, _serializerOptions);
+            var problem = JsonSerializer.Deserialize<ProblemDetailsResponse>(responseText, _serializerOptions);
             return problem?.Detail ?? fallbackMessage;
         }
         catch

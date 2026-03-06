@@ -1,16 +1,16 @@
 ﻿using Dapper;
 using Microsoft.EntityFrameworkCore;
 using TaskHub.Application.abstraction.Repository.Query;
-using TaskHub.Application.Base.Response;
-using TaskHub.Application.Features.TaskItem.Response;
-using TaskHub.Application.Features.TaskList.Response;
+using TaskHub.Application.Common.Pagination;
+using TaskHub.Application.Features.TaskItem.ReadModels;
+using TaskHub.Application.Features.TaskList.ReadModels;
 using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Repositories.Query
 {
     internal sealed class TaskListQueryRepository(TaskHubDbContext db) : ITaskListQueryRepository
     {
-        public async Task<PaginatedResponse<TaskListResponse>> GetAllAsync(int page, int count, CancellationToken ct = default)
+        public async Task<PagedResult<TaskListReadModel>> GetAllAsync(int page, int count, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
 
@@ -48,8 +48,8 @@ namespace TaskHub.Infrastructure.Repositories.Query
             await using var gridReader = await connection.QueryMultipleAsync(command);
 
             var totalItemCount = await gridReader.ReadFirstAsync<int>();
-            var taskLists = (await gridReader.ReadAsync<TaskListResponse>()).ToList();
-            var taskItems = (await gridReader.ReadAsync<TaskItemResponse>()).ToList();
+            var taskLists = (await gridReader.ReadAsync<TaskListReadModel>()).ToList();
+            var taskItems = (await gridReader.ReadAsync<TaskItemReadModel>()).ToList();
 
             var taskListsById = taskLists.ToDictionary(list => list.Id);
 
@@ -59,10 +59,10 @@ namespace TaskHub.Infrastructure.Repositories.Query
                     taskList.Tasks.Add(taskItem);
             }
 
-            return new PaginatedResponse<TaskListResponse> {CurrentPage = page, TotalPageCount = (int)Math.Ceiling(totalItemCount / (double)count), Items = taskLists};
+            return new PagedResult<TaskListReadModel> {PageNumber = page, TotalPages = (int)Math.Ceiling(totalItemCount / (double)count), Items = taskLists};
         }
 
-        public async Task<TaskListResponse?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        public async Task<TaskListReadModel?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
 
@@ -95,11 +95,11 @@ namespace TaskHub.Infrastructure.Repositories.Query
 
             await using var gridReader = await connection.QueryMultipleAsync(command);
 
-            var taskList = await gridReader.ReadSingleOrDefaultAsync<TaskListResponse>();
+            var taskList = await gridReader.ReadSingleOrDefaultAsync<TaskListReadModel>();
             if (taskList is null)
                 return null;
 
-            var taskItems = (await gridReader.ReadAsync<TaskItemResponse>()).ToList();
+            var taskItems = (await gridReader.ReadAsync<TaskItemReadModel>()).ToList();
             taskList.Tasks.AddRange(taskItems);
 
             return taskList;

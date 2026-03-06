@@ -9,8 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\API\TaskHub.Api\TaskHub.Api.csproj" />
     <PackageReference Include="FluentResults" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\TaskHub.Contracts\TaskHub.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

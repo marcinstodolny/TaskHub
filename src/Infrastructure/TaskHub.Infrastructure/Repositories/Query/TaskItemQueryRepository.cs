@@ -2,15 +2,15 @@
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using TaskHub.Application.abstraction.Repository.Query;
-using TaskHub.Application.Base.Response;
-using TaskHub.Application.Features.TaskItem.Response;
+using TaskHub.Application.Common.Pagination;
+using TaskHub.Application.Features.TaskItem.ReadModels;
 using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Repositories.Query
 {
     internal sealed class TaskItemQueryRepository(TaskHubDbContext db) : ITaskItemQueryRepository
     {
-        public async Task<TaskItemResponse?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        public async Task<TaskItemReadModel?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
             if (connection.State != ConnectionState.Open)
@@ -32,10 +32,10 @@ namespace TaskHub.Infrastructure.Repositories.Query
 
 
             var command = new CommandDefinition(sql, new { Id = id }, cancellationToken: ct);
-            return await connection.QuerySingleOrDefaultAsync<TaskItemResponse>(command);
+            return await connection.QuerySingleOrDefaultAsync<TaskItemReadModel>(command);
         }
 
-        public async Task<PaginatedResponse<TaskItemResponse>> GetAllAsync(int page, int count, CancellationToken ct = default)
+        public async Task<PagedResult<TaskItemReadModel>> GetAllAsync(int page, int count, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
 
@@ -67,17 +67,17 @@ namespace TaskHub.Infrastructure.Repositories.Query
 
             await using var gridReader = await connection.QueryMultipleAsync(command);
             var totalItemCount = await gridReader.ReadFirstAsync<int>();
-            var items = (await gridReader.ReadAsync<TaskItemResponse>()).ToList();
+            var items = (await gridReader.ReadAsync<TaskItemReadModel>()).ToList();
 
-            return new PaginatedResponse<TaskItemResponse>
+            return new PagedResult<TaskItemReadModel>
             {
-                CurrentPage = page,
-                TotalPageCount = (int)Math.Ceiling(totalItemCount / (double)count),
+                PageNumber = page,
+                TotalPages = (int)Math.Ceiling(totalItemCount / (double)count),
                 Items = items
             };
         }
 
-        public async Task<IReadOnlyCollection<TaskItemResponse>> GetByTaskListIdAsync(Guid taskListId, CancellationToken ct = default)
+        public async Task<IReadOnlyCollection<TaskItemReadModel>> GetByTaskListIdAsync(Guid taskListId, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
             if (connection.State != ConnectionState.Open)
@@ -99,7 +99,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
                                """;
 
             var command = new CommandDefinition(sql, new { TaskListId = taskListId }, cancellationToken: ct);
-            var items = await connection.QueryAsync<TaskItemResponse>(command);
+            var items = await connection.QueryAsync<TaskItemReadModel>(command);
             return items.ToList();
         }
     }
