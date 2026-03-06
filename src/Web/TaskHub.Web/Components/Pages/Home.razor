@@ -1,7 +1,124 @@
 @page "/"
+@rendermode InteractiveServer
+@using System.Text.Json
+@using TaskHub.Contracts.Common
+@using TaskHub.Contracts.TaskList
+@inject IHttpClientFactory HttpClientFactory
+@inject IConfiguration Configuration
+@inject IWebHostEnvironment Environment
 
 <PageTitle>TaskHub</PageTitle>
 
-<h1>TaskHub Web Client</h1>
+<div class="mb-4">
+    <h1>TaskHub</h1>
+    <h2 class="h4 mt-3">What is TaskHub?</h2>
+    <p class="mb-0">
+        TaskHub is a lightweight workspace for organizing your work with task lists and a Kanban-style board.
+        You can create lists, add tasks, and move them across statuses to keep delivery visible.
+        This home page gives you a quick project overview and shortcuts to the most useful actions.
+    </p>
+</div>
 
-<p>Use the navigation menu to open <strong>Task Board</strong> for Kanban-style task management, or <strong>Endpoint Tester</strong> for raw API calls.</p>
+<section class="mb-4">
+    <h2 class="h4">Quick actions</h2>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="/task-board">Task Board</a>
+        @if (!string.IsNullOrWhiteSpace(_swaggerUrl))
+        {
+            <a class="btn btn-outline-secondary" href="@_swaggerUrl" target="_blank" rel="noopener noreferrer">Swagger</a>
+        }
+        @if (Environment.IsDevelopment())
+        {
+            <a class="btn btn-outline-secondary" href="endpoint-tester">Endpoint Tester</a>
+        }
+    </div>
+</section>
+
+<section>
+    <h2 class="h4">Task Lists (preview)</h2>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    }
+
+    @if (_isLoadingTaskLists)
+    {
+        <div class="alert alert-info" role="status">Loading task lists preview...</div>
+    }
+    else if (_taskListsPage?.Items is null || !_taskListsPage.Items.Any())
+    {
+        <div class="alert alert-secondary" role="alert">
+            No task lists found yet. Create your first list to start planning.
+        </div>
+        <a class="btn btn-primary" href="/task-board">Go to Task Board</a>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Tasks count</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var taskList in _taskListsPage.Items)
+                    {
+                        <tr>
+                            <td>@taskList.Title</td>
+                            <td>—</td>
+                            <td>
+                                <a class="btn btn-sm btn-outline-primary" href="/task-board">Open board</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private readonly JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private PaginatedResponse<TaskListLightResponse>? _taskListsPage;
+    private bool _isLoadingTaskLists;
+    private string? _errorMessage;
+    private string? _swaggerUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _swaggerUrl = Configuration["TaskHub:Links:SwaggerUrl"];
+        await LoadTaskListsPreviewAsync();
+    }
+
+    private async Task LoadTaskListsPreviewAsync()
+    {
+        _isLoadingTaskLists = true;
+        _errorMessage = null;
+
+        try
+        {
+            using var apiClient = HttpClientFactory.CreateClient("TaskHubApi");
+            var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = $"Unable to load task lists preview (HTTP {(int)response.StatusCode}).";
+                return;
+            }
+
+            _taskListsPage = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = $"Unable to load task lists preview: {exception.Message}";
+        }
+        finally
+        {
+            _isLoadingTaskLists = false;
+        }
+    }
+}
