@@ -29,7 +29,8 @@ internal static class ContractMappings
     public static TaskListLightResponse ToContract(this TaskListReadModel source) => new()
     {
         Id = source.Id,
-        Title = source.Title
+        Title = source.Title,
+        TasksCount = source.TasksCount
     };
 
     public static PaginatedResponse<TTarget> Map<TSource, TTarget>(this Application.Common.Pagination.PagedResult<TSource> source, Func<TSource, TTarget> map)

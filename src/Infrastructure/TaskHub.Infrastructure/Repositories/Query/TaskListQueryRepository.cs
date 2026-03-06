@@ -20,28 +20,14 @@ namespace TaskHub.Infrastructure.Repositories.Query
 
                                SELECT 
                                    tl.Id,
-                                   tl.Title
+                                   tl.Title,
+                                   COUNT(ti.Id) AS TasksCount
                                FROM task_lists tl
+                               LEFT JOIN task_items ti ON ti.TaskListId = tl.Id
+                               GROUP BY tl.Id, tl.Title
                                ORDER BY tl.Title
                                OFFSET @skip ROWS 
                                FETCH NEXT @take ROWS ONLY;
-
-                               SELECT
-                                   ti.Id,
-                                   ti.TaskListId,
-                                   ti.Title,
-                                   ti.Description,
-                                   ti.Priority,
-                                   ti.Status
-                               FROM task_items ti
-                               WHERE ti.TaskListId IN (
-                                   SELECT tl.Id
-                                   FROM task_lists tl
-                                   ORDER BY tl.Title
-                                   OFFSET @skip ROWS 
-                                   FETCH NEXT @take ROWS ONLY
-                               )
-                               ORDER BY ti.TaskListId, ti.Id;
                                """;
 
             var command = new CommandDefinition(sql, new { skip = (page - 1) * count, take = count }, cancellationToken: ct);
@@ -49,17 +35,13 @@ namespace TaskHub.Infrastructure.Repositories.Query
 
             var totalItemCount = await gridReader.ReadFirstAsync<int>();
             var taskLists = (await gridReader.ReadAsync<TaskListReadModel>()).ToList();
-            var taskItems = (await gridReader.ReadAsync<TaskItemReadModel>()).ToList();
 
-            var taskListsById = taskLists.ToDictionary(list => list.Id);
-
-            foreach (var taskItem in taskItems)
+            return new PagedResult<TaskListReadModel>
             {
-                if (taskListsById.TryGetValue(taskItem.TaskListId, out var taskList))
-                    taskList.Tasks.Add(taskItem);
-            }
-
-            return new PagedResult<TaskListReadModel> {PageNumber = page, TotalPages = (int)Math.Ceiling(totalItemCount / (double)count), Items = taskLists};
+                PageNumber = page,
+                TotalPages = (int)Math.Ceiling(totalItemCount / (double)count),
+                Items = taskLists
+            };
         }
 
         public async Task<TaskListReadModel?> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -69,9 +51,12 @@ namespace TaskHub.Infrastructure.Repositories.Query
             const string sql = """
                                SELECT TOP (1)
                                    tl.Id,
-                                   tl.Title
+                                   tl.Title,
+                                   COUNT(ti.Id) AS TasksCount
                                FROM task_lists tl
+                               LEFT JOIN task_items ti ON ti.TaskListId = tl.Id
                                WHERE tl.Id = @Id
+                               GROUP BY tl.Id, tl.Title
                                ORDER BY tl.Id;
 
                                SELECT

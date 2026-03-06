@@ -1,7 +1,10 @@
-﻿using FluentAssertions;
+﻿using System.Net.Http.Json;
+using FluentAssertions;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
+using TaskHub.Contracts.Common;
+using TaskHub.Contracts.TaskList;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 using TaskHub.IntegrationTests.Infrastructure;
@@ -45,6 +48,30 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.Single(getAllResult.Value.Items);
 
         Assert.Contains(getAllResult.Value.Items, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
+    }
+
+
+    [Fact]
+    public async Task GetAll_Api_ShouldIncludeTasksCount()
+    {
+        await fixture.ResetAsync();
+
+        var firstList = await fixture.SendAsync(new CreateTaskListCommand("API List A"));
+        var secondList = await fixture.SendAsync(new CreateTaskListCommand("API List B"));
+
+        await fixture.SendAsync(new CreateTaskItemCommand(firstList.Value.Id, "Task A1", "Desc", TaskPriority.Normal));
+
+        using var client = fixture.ApiFactory.CreateClient();
+        var response = await client.GetAsync("/api/TaskList?page=1&count=10");
+
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>();
+
+        Assert.NotNull(payload);
+        Assert.NotNull(payload!.Items);
+        Assert.Contains(payload.Items, item => item.Id == firstList.Value.Id && item.TasksCount >= 0);
+        Assert.Contains(payload.Items, item => item.Id == secondList.Value.Id && item.TasksCount >= 0);
     }
 
     [Fact]
