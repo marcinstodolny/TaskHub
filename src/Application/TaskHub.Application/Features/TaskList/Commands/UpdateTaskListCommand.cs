@@ -38,7 +38,7 @@ public sealed class UpdateTaskListCommandHandler(
 
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result.Success(new TaskListSummaryReadModel { Id = taskList.Id, Title = taskList.Title.Value, TasksCount = 0 });
+        return Result.Success(new TaskListSummaryReadModel { Id = taskList.Id, Title = taskList.Title.Value });
     }
 }
 
