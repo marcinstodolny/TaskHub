@@ -2,16 +2,19 @@
 
 namespace TaskHub.Application.Features.TaskList.ReadModels
 {
-    public record TaskListSummaryReadModel
+    public abstract record TaskListReadModelBase
     {
         public Guid Id { get; set; }
         public string Title { get; set; } = string.Empty;
-        public int TasksCount { get; set; }
-    };
+    }
 
-    public sealed record TaskListReadModel : TaskListSummaryReadModel
+    public sealed record TaskListSummaryReadModel : TaskListReadModelBase
+    {
+        public int TasksCount { get; set; } = 0;
+    }
+
+    public sealed record TaskListDetailsReadModel : TaskListReadModelBase
     {
         public List<TaskItemReadModel> Tasks { get; set; } = new();
-    };
-
+    }
 }

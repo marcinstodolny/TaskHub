@@ -1,5 +1,6 @@
 using TaskItemReadModel = TaskHub.Application.Features.TaskItem.ReadModels.TaskItemReadModel;
-using TaskListReadModel = TaskHub.Application.Features.TaskList.ReadModels.TaskListReadModel;
+using TaskListDetailsReadModel = TaskHub.Application.Features.TaskList.ReadModels.TaskListDetailsReadModel;
+using TaskListSummaryReadModel = TaskHub.Application.Features.TaskList.ReadModels.TaskListSummaryReadModel;
 using TaskHub.Contracts.Common;
 using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
@@ -26,11 +27,18 @@ internal static class ContractMappings
         Title = source.Title
     };
 
-    public static TaskListLightResponse ToContract(this TaskListReadModel source) => new()
+    public static TaskListLightResponse ToContract(this TaskListSummaryReadModel source) => new()
     {
         Id = source.Id,
         Title = source.Title,
         TasksCount = source.TasksCount
+    };
+
+    public static TaskListLightResponse ToContract(this TaskListDetailsReadModel source) => new()
+    {
+        Id = source.Id,
+        Title = source.Title,
+        TasksCount = source.Tasks.Count
     };
 
     public static PaginatedResponse<TTarget> Map<TSource, TTarget>(this Application.Common.Pagination.PagedResult<TSource> source, Func<TSource, TTarget> map)

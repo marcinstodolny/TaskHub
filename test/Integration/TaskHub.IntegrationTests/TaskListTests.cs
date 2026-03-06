@@ -70,8 +70,14 @@ public class TaskListTests(IntegrationTestFixture fixture)
 
         Assert.NotNull(payload);
         Assert.NotNull(payload!.Items);
-        Assert.Contains(payload.Items, item => item.Id == firstList.Value.Id && item.TasksCount >= 0);
-        Assert.Contains(payload.Items, item => item.Id == secondList.Value.Id && item.TasksCount >= 0);
+
+        var firstListPayload = Assert.Single(payload.Items, item => item.Id == firstList.Value.Id);
+        var secondListPayload = Assert.Single(payload.Items, item => item.Id == secondList.Value.Id);
+
+        Assert.True(firstListPayload.TasksCount >= 0);
+        Assert.True(secondListPayload.TasksCount >= 0);
+        Assert.Equal(1, firstListPayload.TasksCount);
+        Assert.Equal(0, secondListPayload.TasksCount);
     }
 
     [Fact]

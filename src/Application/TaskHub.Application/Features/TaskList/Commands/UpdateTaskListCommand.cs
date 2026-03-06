@@ -8,37 +8,37 @@ using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Features.TaskList.Commands;
 
-public sealed record UpdateTaskListCommand(Guid TaskListId, string Title) : IRequest<Result<TaskListReadModel>>;
+public sealed record UpdateTaskListCommand(Guid TaskListId, string Title) : IRequest<Result<TaskListSummaryReadModel>>;
 
 public sealed class UpdateTaskListCommandHandler(
     IUnitOfWork unitOfWork,
     ITaskListCommandRepository taskListCommandRepository)
-    : IRequestHandler<UpdateTaskListCommand, Result<TaskListReadModel>>
+    : IRequestHandler<UpdateTaskListCommand, Result<TaskListSummaryReadModel>>
 {
-    public async Task<Result<TaskListReadModel>> Handle(UpdateTaskListCommand request, CancellationToken ct)
+    public async Task<Result<TaskListSummaryReadModel>> Handle(UpdateTaskListCommand request, CancellationToken ct)
     {
         var getResult = await taskListCommandRepository.GetByIdAsync(request.TaskListId, ct);
         if (getResult.IsFailed)
         {
-            return Result.Fail<TaskListReadModel>(getResult.Errors);
+            return Result.Fail<TaskListSummaryReadModel>(getResult.Errors);
         }
 
         var titleResult = TaskListTitle.Create(request.Title);
         if (titleResult.IsFailed)
         {
-            return Result.Fail<TaskListReadModel>(titleResult.Errors);
+            return Result.Fail<TaskListSummaryReadModel>(titleResult.Errors);
         }
 
         var taskList = getResult.Value;
         var renameResult = taskList.Rename(titleResult.Value);
         if (renameResult.IsFailed)
         {
-            return Result.Fail<TaskListReadModel>(renameResult.Errors);
+            return Result.Fail<TaskListSummaryReadModel>(renameResult.Errors);
         }
 
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result.Success(new TaskListReadModel { Id = taskList.Id, Title = taskList.Title.Value });
+        return Result.Success(new TaskListSummaryReadModel { Id = taskList.Id, Title = taskList.Title.Value, TasksCount = 0 });
     }
 }
 
