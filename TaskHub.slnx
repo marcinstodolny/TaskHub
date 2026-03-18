@@ -7,7 +7,7 @@
     <Project Path="src/Application/TaskHub.Application/TaskHub.Application.csproj" Id="bcd71755-b016-4765-92fb-1d93f774338b" />
   </Folder>
   <Folder Name="/src/Contracts/">
-    <Project Path="src/TaskHub.Contracts/TaskHub.Contracts.csproj" Id="8eeb6ef0-0731-4cad-bdde-54c95dfaf8ee" />
+    <Project Path="src/Contracts/TaskHub.Contracts/TaskHub.Contracts.csproj" Id="8eeb6ef0-0731-4cad-bdde-54c95dfaf8ee" />
   </Folder>
   <Folder Name="/src/Domains/">
     <Project Path="src/Domains/TaskHub.Domain/TaskHub.Domain.csproj" Id="d5d218b6-1bb6-4fb5-a620-f80ff6c044f3" />

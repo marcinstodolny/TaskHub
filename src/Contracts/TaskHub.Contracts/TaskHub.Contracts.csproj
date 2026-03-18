@@ -6,6 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Domains\TaskHub.Domain\TaskHub.Domain.csproj" />
+    <ProjectReference Include="..\..\Domains\TaskHub.Domain\TaskHub.Domain.csproj" />
   </ItemGroup>
 </Project>
