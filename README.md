@@ -1,108 +1,78 @@
 # TaskHub
 
-TaskHub is a sample .NET solution showcasing **CQRS**, **DDD-style layering**, **Dockerized infrastructure**, **hybrid EF Core/Dapper data access**, and **integration testing** against a real SQL Server database.
+## Overview
 
-## What it demonstrates
+TaskHub is an in-progress .NET 10 engineering portfolio project for a task management system built as a multi-project solution. It brings together an ASP.NET Core API, a Blazor web client, a WPF desktop client, shared contracts, and a layered backend structure to show how the same business domain can be exposed through multiple clients and clear project boundaries.
 
-- CQRS with MediatR (commands/queries)
-- Layered structure (Domain / Application / Infrastructure)
-- Hybrid persistence (EF Core for writes, Dapper for read projections)
-- Local environment via Docker Compose (SQL Server + app)
-- Integration tests using Testcontainers (optionally with Respawn for DB cleanup)
+## What this project demonstrates
 
-## Tech stack
+TaskHub is a focused engineering portfolio project that shows how a task management system can be structured as a layered .NET solution without pretending to be complete. In its current form, the repository demonstrates:
 
-- .NET 10
-- ASP.NET Core
-- Entity Framework Core
-- Dapper (query/read projections)
-- MediatR (CQRS)
-- SQL Server (Docker)
-- xUnit + Testcontainers (integration tests)
-- (Optional) Respawn for integration test DB reset
+- CQRS with MediatR in the application layer
+- DDD-inspired domain modeling with entities, value objects, enums, and policies
+- Layered architecture across Domain, Application, Infrastructure, API, Web, and WPF projects
+- Shared request and response contracts via `TaskHub.Contracts`
+- Hybrid persistence with EF Core for transactional writes and Dapper for read-side queries and projections
+- Local development with Docker Compose and SQL Server
+- Integration testing with Testcontainers, with Respawn available for database reset support
+- FluentValidation wired into the MediatR pipeline
 
-## Prerequisites
+## Current state
 
-- Docker (required for integration tests and local SQL Server)
-- .NET SDK 10 (preview)
+TaskHub currently includes working task list and task item endpoints, shared request and response contracts, domain entities and value objects, infrastructure for persistence, a Blazor UI with working pages, and unit and integration test projects. The backend structure is already in place and the web client is usable for demonstrating the flow through the system. The WPF client is intentionally at an earlier stage and should be read as a scaffold for further desktop development rather than a feature-complete application.
 
-## Configuration
+## Architecture foundations
 
-### Docker Compose
+The solution is organized as a layered architecture with clear project boundaries:
 
-1. Copy sample environment variables and adjust values if needed:
+- `src/API/TaskHub.Api` hosts the HTTP API, Swagger configuration, and controllers.
+- `src/Application/TaskHub.Application` contains application-layer requests, abstractions, and behaviors.
+- `src/Domains/TaskHub.Domain` contains the core domain model, value objects, enums, and policies.
+- `src/Infrastructure/TaskHub.Infrastructure` contains persistence, repositories, database configuration, and migrations.
+- `src/Contracts/TaskHub.Contracts` provides shared contracts used across project boundaries.
+- `src/Web/TaskHub.Web` is the current web client.
+- `src/WPF/TaskHub.WPFClient` is the desktop client foundation.
 
-```bash
-cp .env.example .env
-```
-
-2. Start the stack:
-
-```bash
-docker compose up --build
-```
-
-> `docker-compose.override.yml` is used for local development (ports, development environment variables, and optional local certs/secrets mounts).
-
-Services:
-- Web: `http://localhost:5262`
-- API: `http://localhost:8080` / `https://localhost:8081`
-- SQL Server: `localhost:1433`
-
-## Blazor Task Board
-
-The Blazor web app now includes a minimal Kanban-style **Task Board** page.
-
-1. Start the stack:
-
-```bash
-docker compose up --build
-```
-
-2. Open the web client at `http://localhost:5262`.
-3. Navigate to **Task Board** in the left menu.
-4. Select a task list and move cards between statuses using the **Move to** dropdown on each card.
-
-Notes:
-- Columns map directly to domain statuses: `Todo`, `InProgress`, `Done`, `Cancelled`.
-- Status updates use API rules for allowed transitions (invalid transitions return API errors shown in the UI).
-
-## Testing
-
-### Unit tests
-
-```bash
-dotnet test test/Unit/TaskHub.UnitTests/TaskHub.UnitTests.csproj
-```
-
-### Integration tests
-
-Integration tests use Testcontainers and require Docker to be running:
-
-```bash
-dotnet test test/Integration/TaskHub.IntegrationTests/TaskHub.IntegrationTests.csproj
-```
-
-## CI
-
-GitHub Actions runs `dotnet test` on the solution and verifies Docker access for Testcontainers.
+The result is a layered solution with a clear multi-client direction: API and backend concerns stay separate from presentation, while shared contracts keep communication between projects explicit.
 
 ## Project structure
 
+Key areas of the repository:
+
+- `src/API/TaskHub.Api` — API host and controllers
+- `src/Application/TaskHub.Application` — application-layer requests, abstractions, and behaviors
+- `src/Domains/TaskHub.Domain` — domain model and business rules foundation
+- `src/Infrastructure/TaskHub.Infrastructure` — persistence, repositories, and database setup
+- `src/Contracts/TaskHub.Contracts` — shared contracts for requests and responses
+- `src/Web/TaskHub.Web` — Blazor web application
+- `src/WPF/TaskHub.WPFClient` — WPF desktop client scaffold
+- `test/Unit/TaskHub.UnitTests` — unit tests around domain behavior
+- `test/Integration/TaskHub.IntegrationTests` — integration tests for API and persistence flow
+
+## Running locally
+
+Start the full stack with Docker Compose:
+
+```bash
+docker compose up --build
 ```
-src/                     Application code
-  API/                   Web API host
-  Application/           CQRS commands/queries
-  Domain/                DDD domain model
-  Infrastructure/        EF Core + persistence
 
-test/
-  Unit/                  Unit tests
-  Integration/           Integration tests with Testcontainers
+Default endpoints:
+
+```text
+Web: http://localhost:5262
+API: http://localhost:8080
+API (HTTPS): https://localhost:8081
+Swagger: http://localhost:8080/swagger
+SQL Server: localhost:1433
 ```
 
-## Roadmap
+Tests can be run with `dotnet test`, and the integration suite requires Docker.
 
-- Expand API surface (endpoints, commands, queries)
-- Additional integration tests and API contract tests
-- Explore WPF or Blazor client UI (longer term)
+## Planned next steps
+
+- Extend the API and application layer with additional task management use cases.
+- Continue shaping the domain and infrastructure layers as the workflow becomes more complete.
+- Evolve the Blazor client beyond the current working pages into a more polished front end.
+- Build out the WPF client so the desktop path moves beyond its current scaffold.
+- Increase automated test coverage as more behavior is added to the solution.

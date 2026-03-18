@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Application\TaskHub.Application\TaskHub.Application.csproj" />
-    <ProjectReference Include="..\..\TaskHub.Contracts\TaskHub.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\TaskHub.Contracts\TaskHub.Contracts.csproj" />
     <ProjectReference Include="..\..\Infrastructure\TaskHub.Infrastructure\TaskHub.Infrastructure.csproj" />
   </ItemGroup>
 
