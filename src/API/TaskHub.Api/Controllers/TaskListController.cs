@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
@@ -22,6 +23,7 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<PaginatedResponse<TaskListLightResponse>>> GetTaskLists([FromQuery] GetTaskListsQuery query, CancellationToken ct)
         {
             var taskListsResult = await mediator.Send(query, ct);
