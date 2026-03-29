@@ -1,3 +1,4 @@
+using TaskHub.Web.Auth;
 using TaskHub.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +8,10 @@ var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? "https://localh
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<DemoAuthOptions>(builder.Configuration.GetSection(DemoAuthOptions.SectionName));
+builder.Services.AddScoped<DemoAccessTokenProvider>();
+builder.Services.AddScoped<AuthorizedApiClientFactory>();
 
 builder.Services.AddHttpClient("TaskHubApi", client =>
 {

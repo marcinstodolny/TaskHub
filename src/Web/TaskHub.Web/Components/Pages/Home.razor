@@ -3,7 +3,7 @@
 @using System.Text.Json
 @using TaskHub.Contracts.Common
 @using TaskHub.Contracts.TaskList
-@inject IHttpClientFactory HttpClientFactory
+@inject TaskHub.Web.Auth.AuthorizedApiClientFactory ApiClientFactory
 @inject IConfiguration Configuration
 @inject IWebHostEnvironment Environment
 
@@ -102,19 +102,26 @@
 
         try
         {
-            using var apiClient = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
+            var apiClient = await ApiClientFactory.CreateAsync();
+            using var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
+
+            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+            {
+                _errorMessage = "Preview is temporarily unavailable. Please refresh and try again.";
+                return;
+            }
+
             if (!response.IsSuccessStatusCode)
             {
-                _errorMessage = $"Unable to load task lists preview (HTTP {(int)response.StatusCode}).";
+                _errorMessage = "Unable to load task lists preview right now.";
                 return;
             }
 
             _taskListsPage = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = $"Unable to load task lists preview: {exception.Message}";
+            _errorMessage = "Unable to load task lists preview right now.";
         }
         finally
         {
