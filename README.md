@@ -51,7 +51,21 @@ Key areas of the repository:
 
 ## Running locally
 
-The repository includes a default local environment template in `.env.example`.
+The easiest local start is through the helper script. It creates `.env` from `.env.example` if needed and then starts Docker Compose.
+
+On Windows PowerShell:
+
+```powershell
+.\scripts\dev-up.ps1
+```
+
+On macOS or Linux:
+
+```bash
+sh ./scripts/dev-up.sh
+```
+
+If you prefer to do it manually, the repository includes a default local environment template in `.env.example`.
 Create your own `.env` file from it:
 
 ```bash
