@@ -6,7 +6,7 @@
 @using TaskHub.Contracts.TaskItem
 @using TaskHub.Contracts.TaskList
 @using TaskStatus = TaskHub.Domain.Enums.TaskStatus
-@inject IHttpClientFactory HttpClientFactory
+@inject TaskHub.Web.Auth.AuthorizedApiClientFactory ApiClientFactory
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Task Board</PageTitle>
@@ -215,8 +215,7 @@ else
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await client.GetAsync("/api/TaskList?page=1&count=100");
+            using var response = await SendAuthorizedAsync(client => client.GetAsync("/api/TaskList?page=1&count=100"));
             if (!response.IsSuccessStatusCode)
             {
                 _errorMessage = await GetErrorMessageAsync(response, "Unable to load task lists.");
@@ -236,9 +235,9 @@ else
                 _tasks = [];
             }
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = exception.Message;
+            _errorMessage = "Unable to load task lists.";
         }
         finally
         {
@@ -265,8 +264,7 @@ else
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await client.GetAsync($"/api/TaskItem/board/{_selectedTaskListId.Value}");
+            using var response = await SendAuthorizedAsync(client => client.GetAsync($"/api/TaskItem/board/{_selectedTaskListId.Value}"));
             if (!response.IsSuccessStatusCode)
             {
                 _errorMessage = await GetErrorMessageAsync(response, "Unable to load task board.");
@@ -276,9 +274,9 @@ else
             var boardTasks = await response.Content.ReadFromJsonAsync<List<TaskCardResponse>>(_serializerOptions);
             _tasks = boardTasks ?? [];
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = exception.Message;
+            _errorMessage = "Unable to load task board.";
         }
         finally
         {
@@ -331,22 +329,23 @@ else
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
             HttpResponseMessage response;
 
             if (_isCreatingTaskList)
             {
-                response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest(title));
+                response = await SendAuthorizedAsync(client => client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest(title)));
             }
             else if (_isRenamingTaskList && _selectedTaskListId is not null)
             {
-                response = await client.PutAsJsonAsync($"/api/TaskList/{_selectedTaskListId.Value}", new UpdateTaskListRequest(title));
+                response = await SendAuthorizedAsync(client => client.PutAsJsonAsync($"/api/TaskList/{_selectedTaskListId.Value}", new UpdateTaskListRequest(title)));
             }
             else
             {
                 return;
             }
 
+            using (response)
+            {
             if (!response.IsSuccessStatusCode)
             {
                 _errorMessage = await GetErrorMessageAsync(response, "Unable to save task list.");
@@ -361,10 +360,11 @@ else
 
             CancelTaskListForm();
             await LoadTaskListsAsync();
+            }
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = exception.Message;
+            _errorMessage = "Unable to save task list.";
         }
         finally
         {
@@ -390,9 +390,8 @@ else
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
             var taskListId = _selectedTaskListId.Value;
-            var response = await client.DeleteAsync($"/api/TaskList/{taskListId}");
+            using var response = await SendAuthorizedAsync(client => client.DeleteAsync($"/api/TaskList/{taskListId}"));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -407,9 +406,9 @@ else
             _selectedTaskListId ??= _taskLists.FirstOrDefault()?.Id;
             await LoadBoardAsync();
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = exception.Message;
+            _errorMessage = "Unable to delete task list.";
         }
         finally
         {
@@ -452,20 +451,21 @@ else
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
             HttpResponseMessage response;
 
             if (_editingTaskId is null)
             {
                 var createDto = new CreateTaskItemRequest(_selectedTaskListId.Value, title, _taskForm.Description, _taskForm.Priority);
-                response = await client.PostAsJsonAsync("/api/TaskItem", createDto);
+                response = await SendAuthorizedAsync(client => client.PostAsJsonAsync("/api/TaskItem", createDto));
             }
             else
             {
                 var updateDto = new UpdateTaskItemRequest(title, _taskForm.Description, _taskForm.Priority);
-                response = await client.PutAsJsonAsync($"/api/TaskItem/{_editingTaskId.Value}", updateDto);
+                response = await SendAuthorizedAsync(client => client.PutAsJsonAsync($"/api/TaskItem/{_editingTaskId.Value}", updateDto));
             }
 
+            using (response)
+            {
             if (!response.IsSuccessStatusCode)
             {
                 _errorMessage = await GetErrorMessageAsync(response, "Unable to save task.");
@@ -474,10 +474,11 @@ else
 
             CancelTaskEdit();
             await LoadBoardAsync();
+            }
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = exception.Message;
+            _errorMessage = "Unable to save task.";
         }
         finally
         {
@@ -499,8 +500,7 @@ else
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await client.PostAsJsonAsync($"/api/TaskItem/{task.Id}/status", new UpdateTaskStatusRequest(targetStatus));
+            using var response = await SendAuthorizedAsync(client => client.PostAsJsonAsync($"/api/TaskItem/{task.Id}/status", new UpdateTaskStatusRequest(targetStatus)));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -511,10 +511,10 @@ else
 
             await LoadBoardAsync();
         }
-        catch (Exception exception)
+        catch
         {
             task.Status = previousStatus;
-            _errorMessage = exception.Message;
+            _errorMessage = "Unable to update task status.";
         }
         finally
         {
@@ -540,8 +540,7 @@ else
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await client.DeleteAsync($"/api/TaskItem/{taskId}");
+            using var response = await SendAuthorizedAsync(client => client.DeleteAsync($"/api/TaskItem/{taskId}"));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -556,9 +555,9 @@ else
 
             await LoadBoardAsync();
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = exception.Message;
+            _errorMessage = "Unable to delete task.";
         }
         finally
         {
@@ -591,8 +590,32 @@ else
 
     private static string GetCountCssClass(TaskStatus status) => GetStatusCssClass(status);
 
+    private async Task<HttpResponseMessage> SendAuthorizedAsync(Func<HttpClient, Task<HttpResponseMessage>> request)
+    {
+        var response = await SendAsync(forceRefreshToken: false);
+        if (response.StatusCode is not (System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden))
+        {
+            return response;
+        }
+        response.Dispose();
+        response = await SendAsync(forceRefreshToken: true);
+
+        return response;
+
+        async Task<HttpResponseMessage> SendAsync(bool forceRefreshToken)
+        {
+            var client = await ApiClientFactory.CreateAsync(forceRefreshToken);
+            return await request(client);
+        }
+    }
+
     private async Task<string> GetErrorMessageAsync(HttpResponseMessage response, string fallbackMessage)
     {
+        if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+        {
+            return "Task board is temporarily unavailable. Please refresh and try again.";
+        }
+
         var responseText = await response.Content.ReadAsStringAsync();
 
         if (string.IsNullOrWhiteSpace(responseText))
