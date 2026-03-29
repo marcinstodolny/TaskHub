@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 using TaskHub.Api.Auth;
 using TaskHub.Api.Auth.Options;
 using TaskHub.Application;
@@ -22,7 +23,34 @@ namespace TaskHub.Api
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(options =>
+            {
+                var bearerScheme = new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Paste your JWT token."
+                };
+
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "TaskHub API",
+                    Version = "v1"
+                });
+
+                options.AddSecurityDefinition("Bearer", bearerScheme);
+
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecuritySchemeReference("Bearer", document, null),
+                        new List<string>()
+                    }
+                });
+            });
             builder.Services.AddSignalR();
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);

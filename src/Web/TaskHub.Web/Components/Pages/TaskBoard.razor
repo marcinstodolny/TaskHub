@@ -5,8 +5,9 @@
 @using TaskHub.Contracts.Common
 @using TaskHub.Contracts.TaskItem
 @using TaskHub.Contracts.TaskList
+@using TaskHub.Web.Auth
 @using TaskStatus = TaskHub.Domain.Enums.TaskStatus
-@inject TaskHub.Web.Auth.AuthorizedApiClientFactory ApiClientFactory
+@inject AuthorizedRequestExecutor AuthorizedRequestExecutor
 @inject IWebHostEnvironment Environment
 @inject IJSRuntime JSRuntime
 
@@ -604,21 +605,7 @@ else
 
     private async Task<HttpResponseMessage> SendAuthorizedAsync(Func<HttpClient, Task<HttpResponseMessage>> request)
     {
-        var response = await SendAsync(forceRefreshToken: false);
-        if (response.StatusCode is not (System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden))
-        {
-            return response;
-        }
-        response.Dispose();
-        response = await SendAsync(forceRefreshToken: true);
-
-        return response;
-
-        async Task<HttpResponseMessage> SendAsync(bool forceRefreshToken)
-        {
-            var client = await ApiClientFactory.CreateAsync(forceRefreshToken);
-            return await request(client);
-        }
+        return await AuthorizedRequestExecutor.SendAsync(request);
     }
 
     private async Task<string> GetErrorMessageAsync(HttpResponseMessage response, string fallbackMessage)

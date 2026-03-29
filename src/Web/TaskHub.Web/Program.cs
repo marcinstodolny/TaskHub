@@ -23,6 +23,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddScoped<DemoAccessTokenProvider>();
 builder.Services.AddScoped<AuthorizedApiClientFactory>();
+builder.Services.AddScoped<AuthorizedRequestExecutor>();
 
 builder.Services.AddHttpClient("TaskHubApi", client =>
 {

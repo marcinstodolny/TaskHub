@@ -5,13 +5,14 @@
 @using System.Text
 @using System.Text.Json
 @using Microsoft.AspNetCore.WebUtilities
-@inject IHttpClientFactory HttpClientFactory
+@using TaskHub.Web.Auth
+@inject AuthorizedRequestExecutor AuthorizedRequestExecutor
 
 <PageTitle>Endpoint Tester</PageTitle>
 
 <h1>Endpoint Tester</h1>
 
-<p class="text-muted">Use this page to test TaskHub API endpoints without Swagger.</p>
+<p class="text-muted">Use this page to test TaskHub API endpoints without Swagger. Requests automatically include the demo JWT.</p>
 
 <div class="card mb-4">
     <div class="card-body">
@@ -103,24 +104,8 @@
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("TaskHubApi");
-            using var message = new HttpRequestMessage(new HttpMethod(_request.Method), BuildRequestUri());
-            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            if (ShouldIncludeBody(_request.Method) && !string.IsNullOrWhiteSpace(_request.Body))
-            {
-                if (!IsValidJson(_request.Body))
-                {
-                    _errorMessage = "Request body is not valid JSON.";
-                    return;
-                }
-
-                message.Content = new StringContent(_request.Body, Encoding.UTF8, "application/json");
-            }
-
-            var startedAt = DateTime.UtcNow;
-            var httpResponse = await client.SendAsync(message);
-            var elapsed = DateTime.UtcNow - startedAt;
+            var (response, elapsed) = await SendAuthorizedRequestAsync();
+            using var httpResponse = response;
 
             var body = await httpResponse.Content.ReadAsStringAsync();
             if (string.IsNullOrWhiteSpace(body))
@@ -182,6 +167,37 @@
             formatted = payload;
             return false;
         }
+    }
+
+    private async Task<(HttpResponseMessage Response, TimeSpan Duration)> SendAuthorizedRequestAsync()
+    {
+        var startedAt = DateTime.UtcNow;
+        var response = await AuthorizedRequestExecutor.SendAsync(async client =>
+        {
+            using var message = CreateRequestMessage();
+            return await client.SendAsync(message);
+        }, retryOnForbidden: false);
+
+        var elapsed = DateTime.UtcNow - startedAt;
+        return (response, elapsed);
+    }
+
+    private HttpRequestMessage CreateRequestMessage()
+    {
+        var message = new HttpRequestMessage(new HttpMethod(_request.Method), BuildRequestUri());
+        message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        if (ShouldIncludeBody(_request.Method) && !string.IsNullOrWhiteSpace(_request.Body))
+        {
+            if (!IsValidJson(_request.Body))
+            {
+                throw new InvalidOperationException("Request body is not valid JSON.");
+            }
+
+            message.Content = new StringContent(_request.Body, Encoding.UTF8, "application/json");
+        }
+
+        return message;
     }
 
     private static Dictionary<string, string?> ParseQueryString(string queryString)
