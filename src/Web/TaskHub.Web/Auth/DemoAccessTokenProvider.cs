@@ -8,36 +8,50 @@ public sealed class DemoAccessTokenProvider(IHttpClientFactory httpClientFactory
 {
     private string? _accessToken;
     private DateTimeOffset? _accessTokenExpiresAtUtc;
+    private readonly SemaphoreSlim _tokenRefreshLock = new(1, 1);
 
-    public async Task<string> GetAccessTokenAsync(CancellationToken ct = default)
+    public async Task<string> GetAccessTokenAsync(bool forceRefresh = false, CancellationToken ct = default)
     {
-        if (HasValidToken())
+        if (!forceRefresh && HasValidToken())
         {
             return _accessToken!;
         }
 
-        var options = demoAuthOptions.Value;
-
-        var tokenRequest = new TokenRequest(options.Username, options.Password);
-        var apiClient = httpClientFactory.CreateClient("TaskHubApi");
-        using var response = await apiClient.PostAsJsonAsync("/api/auth/token", tokenRequest, ct);
-
-        if (!response.IsSuccessStatusCode)
+        await _tokenRefreshLock.WaitAsync(ct);
+        try
         {
-            throw new InvalidOperationException("Unable to sign in to demo API.");
+            if (!forceRefresh && HasValidToken())
+            {
+                return _accessToken!;
+            }
+
+            var options = demoAuthOptions.Value;
+
+            var tokenRequest = new TokenRequest(options.Username, options.Password);
+            var apiClient = httpClientFactory.CreateClient("TaskHubApi");
+            using var response = await apiClient.PostAsJsonAsync("/api/auth/token", tokenRequest, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException("Unable to sign in to demo API.");
+            }
+
+            var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct);
+
+            if (string.IsNullOrWhiteSpace(tokenResponse?.AccessToken))
+            {
+                throw new InvalidOperationException("Demo API returned an invalid token.");
+            }
+
+            _accessToken = tokenResponse.AccessToken;
+            _accessTokenExpiresAtUtc = ResolveExpirationUtc(_accessToken);
+
+            return _accessToken;
         }
-
-        var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct);
-
-        if (string.IsNullOrWhiteSpace(tokenResponse?.AccessToken))
+        finally
         {
-            throw new InvalidOperationException("Demo API returned an invalid token.");
+            _tokenRefreshLock.Release();
         }
-
-        _accessToken = tokenResponse.AccessToken;
-        _accessTokenExpiresAtUtc = ResolveExpirationUtc(_accessToken);
-
-        return _accessToken;
     }
 
     private bool HasValidToken()
@@ -49,7 +63,7 @@ public sealed class DemoAccessTokenProvider(IHttpClientFactory httpClientFactory
 
         if (_accessTokenExpiresAtUtc is null)
         {
-            return true;
+            return false;
         }
 
         return _accessTokenExpiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(1);

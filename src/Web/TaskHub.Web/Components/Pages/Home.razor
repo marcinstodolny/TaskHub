@@ -3,7 +3,7 @@
 @using System.Text.Json
 @using TaskHub.Contracts.Common
 @using TaskHub.Contracts.TaskList
-@inject TaskHub.Web.Auth.AuthorizedApiClientFactory ApiClientFactory
+@inject Auth.AuthorizedApiClientFactory ApiClientFactory
 @inject IConfiguration Configuration
 @inject IWebHostEnvironment Environment
 
@@ -102,22 +102,12 @@
 
         try
         {
-            var apiClient = await ApiClientFactory.CreateAsync();
-            using var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
+            _taskListsPage = await TryLoadTaskListsPreviewAsync(forceRefreshToken: false) ?? await TryLoadTaskListsPreviewAsync(forceRefreshToken: true);
 
-            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
-            {
-                _errorMessage = "Preview is temporarily unavailable. Please refresh and try again.";
-                return;
-            }
-
-            if (!response.IsSuccessStatusCode)
+            if (_taskListsPage is null && string.IsNullOrWhiteSpace(_errorMessage))
             {
                 _errorMessage = "Unable to load task lists preview right now.";
-                return;
             }
-
-            _taskListsPage = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
         }
         catch
         {
@@ -127,5 +117,27 @@
         {
             _isLoadingTaskLists = false;
         }
+    }
+
+    private async Task<PaginatedResponse<TaskListLightResponse>?> TryLoadTaskListsPreviewAsync(bool forceRefreshToken)
+    {
+        var apiClient = await ApiClientFactory.CreateAsync(forceRefreshToken);
+        using var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
+
+        if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+        {
+            _errorMessage = forceRefreshToken
+                ? "Preview is temporarily unavailable. Please refresh and try again."
+                : null;
+
+            return null;
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
+        }
+        _errorMessage = "Unable to load task lists preview right now.";
+        return null;
     }
 }

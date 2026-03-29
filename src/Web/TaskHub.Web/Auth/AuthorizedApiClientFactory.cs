@@ -4,9 +4,9 @@ namespace TaskHub.Web.Auth;
 
 public sealed class AuthorizedApiClientFactory(IHttpClientFactory httpClientFactory, DemoAccessTokenProvider tokenProvider)
 {
-    public async Task<HttpClient> CreateAsync(CancellationToken ct = default)
+    public async Task<HttpClient> CreateAsync(bool forceRefresh = false, CancellationToken ct = default)
     {
-        var accessToken = await tokenProvider.GetAccessTokenAsync(ct);
+        var accessToken = await tokenProvider.GetAccessTokenAsync(forceRefresh, ct);
 
         var apiClient = httpClientFactory.CreateClient("TaskHubApi");
         apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
