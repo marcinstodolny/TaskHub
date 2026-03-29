@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using TaskHub.Api.Auth;
 using TaskHub.Api.Auth.Options;
+using TaskHub.Contracts.Auth;
 
 namespace TaskHub.Api.Controllers;
 
@@ -26,7 +27,4 @@ public sealed class AuthController(IOptions<DemoAuthOptions> demoAuthOptions, Jw
         return Ok(new TokenResponse(token));
     }
 
-    public sealed record TokenRequest(string Username, string Password);
-
-    public sealed record TokenResponse(string AccessToken);
 }
