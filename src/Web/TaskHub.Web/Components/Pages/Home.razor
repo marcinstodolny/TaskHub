@@ -92,6 +92,13 @@
     protected override async Task OnInitializedAsync()
     {
         _swaggerUrl = Configuration["TaskHub:Links:SwaggerUrl"];
+
+        if (!Environment.IsDevelopment() && !Environment.IsEnvironment("Testing"))
+        {
+            _errorMessage = "Task preview is available only in local development.";
+            return;
+        }
+
         await LoadTaskListsPreviewAsync();
     }
 

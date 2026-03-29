@@ -7,6 +7,7 @@
 @using TaskHub.Contracts.TaskList
 @using TaskStatus = TaskHub.Domain.Enums.TaskStatus
 @inject TaskHub.Web.Auth.AuthorizedApiClientFactory ApiClientFactory
+@inject IWebHostEnvironment Environment
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Task Board</PageTitle>
@@ -21,7 +22,7 @@
                      class="form-select"
                      @bind-Value="_selectedTaskListId"
                      @bind-Value:after="OnSelectedTaskListChangedAsync"
-                     disabled="@(_isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">
+                     disabled="@(_isDemoModeDisabled || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">
             @if (_taskLists.Count == 0)
             {
                 <option value="">No task lists available</option>
@@ -35,9 +36,9 @@
             }
         </InputSelect>
 
-        <button type="button" class="btn btn-outline-secondary" @onclick="BeginRenameTaskList" disabled="@(_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Rename list</button>
-        <button type="button" class="btn btn-outline-danger" @onclick="OnDeleteTaskListAsync" disabled="@(_selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Delete list</button>
-        <button type="button" class="btn btn-outline-primary" @onclick="BeginCreateTaskList" disabled="@(_isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">New list</button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="BeginRenameTaskList" disabled="@(_isDemoModeDisabled || _selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Rename list</button>
+        <button type="button" class="btn btn-outline-danger" @onclick="OnDeleteTaskListAsync" disabled="@(_isDemoModeDisabled || _selectedTaskListId is null || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">Delete list</button>
+        <button type="button" class="btn btn-outline-primary" @onclick="BeginCreateTaskList" disabled="@(_isDemoModeDisabled || _isLoadingLists || _isSubmittingTaskList || _isDeletingTaskList)">New list</button>
     </div>
 </div>
 
@@ -205,8 +206,19 @@ else
     private bool _isSubmittingTaskList;
     private bool _isSubmittingTask;
     private bool _isDeletingTaskList;
+    private bool _isDemoModeDisabled;
 
-    protected override async Task OnInitializedAsync() => await LoadTaskListsAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        _isDemoModeDisabled = !Environment.IsDevelopment() && !Environment.IsEnvironment("Testing");
+        if (_isDemoModeDisabled)
+        {
+            _errorMessage = "Task board demo is available only in local development.";
+            return;
+        }
+
+        await LoadTaskListsAsync();
+    }
 
     private async Task LoadTaskListsAsync()
     {

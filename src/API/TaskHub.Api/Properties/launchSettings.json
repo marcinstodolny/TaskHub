@@ -5,7 +5,12 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Issuer": "TaskHub.Api.Local",
+        "Jwt__Audience": "TaskHub.Clients.Local",
+        "Jwt__SigningKey": "local-dev-jwt-signing-key-change-me-123456789",
+        "DemoAuth__Username": "DefaultUser",
+        "DemoAuth__Password": "DefaultPassword123!"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5072"
@@ -15,7 +20,12 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Issuer": "TaskHub.Api.Local",
+        "Jwt__Audience": "TaskHub.Clients.Local",
+        "Jwt__SigningKey": "local-dev-jwt-signing-key-change-me-123456789",
+        "DemoAuth__Username": "DefaultUser",
+        "DemoAuth__Password": "DefaultPassword123!"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7040;http://localhost:5072"
@@ -25,7 +35,12 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Issuer": "TaskHub.Api.Local",
+        "Jwt__Audience": "TaskHub.Clients.Local",
+        "Jwt__SigningKey": "local-dev-jwt-signing-key-change-me-123456789",
+        "DemoAuth__Username": "DefaultUser",
+        "DemoAuth__Password": "DefaultPassword123!"
       }
     },
     "Container (Dockerfile)": {

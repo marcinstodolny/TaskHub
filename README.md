@@ -53,6 +53,8 @@ Key areas of the repository:
 
 The easiest local start is through the helper script. It creates `.env` from `.env.example` if needed and then starts Docker Compose.
 
+If you run the API or Web project directly from an IDE or from `dotnet run`, the launch profiles also include matching local development values for JWT and demo auth.
+
 On Windows PowerShell:
 
 ```powershell
