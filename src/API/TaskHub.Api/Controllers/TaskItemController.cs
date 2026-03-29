@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskItem.Queries;
@@ -9,6 +10,7 @@ namespace TaskHub.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class TaskItemController(IMediator mediator) : ControllerBase
     {
         [HttpGet("{taskItemId:guid}")]

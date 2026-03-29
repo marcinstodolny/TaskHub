@@ -239,7 +239,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             "Description",
             TaskPriority.Normal));
 
-        using var client = fixture.ApiFactory.CreateClient();
+        using var client = await fixture.CreateAuthorizedClientAsync();
 
         var response = await fixture.SendAsync(new GetTaskItemByIdQuery(createItemResult.Value));
 
@@ -290,7 +290,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             "Description",
             TaskPriority.Normal));
 
-        using var client = fixture.ApiFactory.CreateClient();
+        using var client = await fixture.CreateAuthorizedClientAsync();
 
         var response = await client.PostAsJsonAsync(
             $"/api/TaskItem/{createItemResult.Value}/status",
@@ -313,7 +313,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        using var client = fixture.ApiFactory.CreateClient();
+        using var client = await fixture.CreateAuthorizedClientAsync();
 
         var response = await client.PostAsJsonAsync(
             $"/api/TaskItem/{Guid.NewGuid()}/status",
@@ -346,7 +346,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             "Description",
             TaskPriority.Normal));
 
-        using var client = fixture.ApiFactory.CreateClient();
+        using var client = await fixture.CreateAuthorizedClientAsync();
 
         var moveToDoneResponse = await client.PostAsJsonAsync(
             $"/api/TaskItem/{createItemResult.Value}/status",
@@ -378,7 +378,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             "Description",
             TaskPriority.Normal));
 
-        using var client = fixture.ApiFactory.CreateClient();
+        using var client = await fixture.CreateAuthorizedClientAsync();
 
         var updateResponse = await client.PostAsJsonAsync(
             $"/api/TaskItem/{createItemResult.Value}/status",
@@ -412,7 +412,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             "Other description",
             TaskPriority.Low));
 
-        using var client = fixture.ApiFactory.CreateClient();
+        using var client = await fixture.CreateAuthorizedClientAsync();
         var boardItems = await client.GetFromJsonAsync<List<TaskCardResponse>>($"/api/TaskItem/board/{selectedListResult.Value.Id}");
 
         Assert.NotNull(boardItems);

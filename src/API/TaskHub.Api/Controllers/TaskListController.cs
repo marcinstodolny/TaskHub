@@ -10,6 +10,7 @@ namespace TaskHub.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class TaskListController(IMediator mediator) : ControllerBase
     {
         [HttpGet("{taskListId:guid}")]
@@ -23,7 +24,6 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize]
         public async Task<ActionResult<PaginatedResponse<TaskListLightResponse>>> GetTaskLists([FromQuery] GetTaskListsQuery query, CancellationToken ct)
         {
             var taskListsResult = await mediator.Send(query, ct);
