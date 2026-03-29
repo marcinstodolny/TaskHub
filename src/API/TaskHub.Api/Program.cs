@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using TaskHub.Api.Auth;
 using TaskHub.Api.Auth.Options;
 using TaskHub.Application;
@@ -26,17 +27,39 @@ namespace TaskHub.Api
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
-            builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
-            builder.Services.Configure<DemoAuthOptions>(builder.Configuration.GetSection(DemoAuthOptions.SectionName));
-            builder.Services.AddSingleton<JwtTokenGenerator>();
+            builder.Services
+                .AddOptions<JwtOptions>()
+                .BindConfiguration(JwtOptions.SectionName)
+                .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "JWT issuer is not configured.")
+                .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "JWT audience is not configured.")
+                .Validate(options => !string.IsNullOrWhiteSpace(options.SigningKey), "JWT signing key is not configured.")
+                .ValidateOnStart();
 
-            var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
+            var demoAuthOptionsBuilder = builder.Services
+                .AddOptions<DemoAuthOptions>()
+                .BindConfiguration(DemoAuthOptions.SectionName);
+
+            if (IsDemoAuthEnabled(builder.Environment))
+            {
+                demoAuthOptionsBuilder
+                    .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
+                    .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
+                    .ValidateOnStart();
+            }
+
+            builder.Services.AddSingleton<JwtTokenGenerator>();
 
             builder.Services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
+                .AddJwtBearer();
+
+            builder.Services
+                .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+                .Configure<IOptions<JwtOptions>>((options, jwtOptionsAccessor) =>
                 {
+                    var jwtOptions = jwtOptionsAccessor.Value;
+                    var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
+
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -102,5 +125,8 @@ namespace TaskHub.Api
 
             app.Run();
         }
+
+        private static bool IsDemoAuthEnabled(IHostEnvironment environment) =>
+            environment.IsDevelopment() || environment.IsEnvironment("Testing");
     }
 }

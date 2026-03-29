@@ -9,12 +9,17 @@ namespace TaskHub.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class AuthController(IOptions<DemoAuthOptions> demoAuthOptions, JwtTokenGenerator tokenGenerator) : ControllerBase
+public sealed class AuthController(IOptions<DemoAuthOptions> demoAuthOptions, JwtTokenGenerator tokenGenerator, IWebHostEnvironment environment) : ControllerBase
 {
     [HttpPost("token")]
     [AllowAnonymous]
     public ActionResult<TokenResponse> CreateToken([FromBody] TokenRequest request)
     {
+        if (!environment.IsDevelopment() && !environment.IsEnvironment("Testing"))
+        {
+            return NotFound();
+        }
+
         var demoUser = demoAuthOptions.Value;
 
         if (!string.Equals(request.Username, demoUser.Username, StringComparison.Ordinal)

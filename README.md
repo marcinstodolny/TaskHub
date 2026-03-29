@@ -51,6 +51,21 @@ Key areas of the repository:
 
 ## Running locally
 
+The repository includes a default local environment template in `.env.example`.
+Create your own `.env` file from it:
+
+```bash
+cp .env.example .env
+```
+
+On PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+The example file contains local development values for Docker Compose. They are intended only for local development. If you need different credentials or JWT settings, change them in `.env` before starting the stack.
+
 Start the full stack with Docker Compose:
 
 ```bash
@@ -62,7 +77,6 @@ Default endpoints:
 ```text
 Web: http://localhost:5262
 API: http://localhost:8080
-API (HTTPS): https://localhost:8081
 Swagger: http://localhost:8080/swagger
 SQL Server: localhost:1433
 ```

@@ -24,9 +24,12 @@ public class TaskHubApiFactory(TaskHubMsSqlFixture database) : WebApplicationFac
         {
             configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["Jwt:Issuer"] = "TaskHub.Api.Tests",
+                ["Jwt:Audience"] = "TaskHub.IntegrationTests",
+                ["Jwt:SigningKey"] = "taskhub-integration-tests-signing-key-123",
+                ["Jwt:ExpiresInMinutes"] = "60",
                 ["DemoAuth:Username"] = TestUsername,
                 ["DemoAuth:Password"] = TestPassword,
-                ["DemoAuth:Role"] = "User",
             });
         });
 
