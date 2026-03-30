@@ -67,13 +67,10 @@ namespace TaskHub.Api
                 .AddOptions<DemoAuthOptions>()
                 .BindConfiguration(DemoAuthOptions.SectionName);
 
-            if (IsDemoAuthEnabled(builder.Environment))
-            {
-                demoAuthOptionsBuilder
-                    .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
-                    .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
-                    .ValidateOnStart();
-            }
+            demoAuthOptionsBuilder
+                .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
+                .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
+                .ValidateOnStart();
 
             builder.Services.AddSingleton<JwtTokenGenerator>();
 
@@ -153,8 +150,5 @@ namespace TaskHub.Api
 
             app.Run();
         }
-
-        private static bool IsDemoAuthEnabled(IHostEnvironment environment) =>
-            environment.IsDevelopment() || environment.IsEnvironment("Testing");
     }
 }

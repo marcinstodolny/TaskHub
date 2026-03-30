@@ -9,13 +9,10 @@ var demoAuthOptionsBuilder = builder.Services
     .AddOptions<DemoAuthOptions>()
     .BindConfiguration(DemoAuthOptions.SectionName);
 
-if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
-{
-    demoAuthOptionsBuilder
-        .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
-        .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
-        .ValidateOnStart();
-}
+demoAuthOptionsBuilder
+    .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
+    .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
+    .ValidateOnStart();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

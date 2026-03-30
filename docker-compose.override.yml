@@ -4,6 +4,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - Api__BaseAddress=http://taskhub.api:8080
+      - DemoAuth__Enabled=${TASKHUB_DEMO_ENABLED}
       - DemoAuth__Username=${TASKHUB_DEMO_USERNAME}
       - DemoAuth__Password=${TASKHUB_DEMO_PASSWORD}
       - TaskHub__Links__SwaggerUrl=http://localhost:8080/swagger/index.html
@@ -23,6 +24,7 @@ services:
       - Jwt__Issuer=${TASKHUB_JWT_ISSUER}
       - Jwt__Audience=${TASKHUB_JWT_AUDIENCE}
       - Jwt__SigningKey=${TASKHUB_JWT_SIGNING_KEY}
+      - DemoAuth__Enabled=${TASKHUB_DEMO_ENABLED}
       - DemoAuth__Username=${TASKHUB_DEMO_USERNAME}
       - DemoAuth__Password=${TASKHUB_DEMO_PASSWORD}
     ports:
