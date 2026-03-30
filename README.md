@@ -53,7 +53,7 @@ Key areas of the repository:
 
 You can run the project locally in two ways:
 
-- Run the API and Web projects directly from an IDE or via `dotnet run`. The checked-in launch profiles provide matching local development settings for JWT, demo auth, and the API base address.
+- Run the API and Web projects directly from an IDE or via `dotnet run`. The checked-in development appsettings provide local JWT and demo-auth values, and the launch profiles provide the local environment and application URLs.
 - Run the full stack with Docker Compose. Before startup, create `.env` from `.env.example`:
 
 ```bash

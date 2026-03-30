@@ -16,9 +16,7 @@
       "applicationUrl": "http://localhost:5262",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Api__BaseAddress": "http://localhost:5072",
-        "DemoAuth__Username": "DefaultUser",
-        "DemoAuth__Password": "DefaultPassword123!"
+        "Api__BaseAddress": "http://localhost:5072"
       }
     },
     "https": {
@@ -28,9 +26,7 @@
       "applicationUrl": "https://localhost:7004;http://localhost:5262",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Api__BaseAddress": "https://localhost:7040",
-        "DemoAuth__Username": "DefaultUser",
-        "DemoAuth__Password": "DefaultPassword123!"
+        "Api__BaseAddress": "https://localhost:7040"
       }
     },
     "IIS Express": {
@@ -38,9 +34,7 @@
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Api__BaseAddress": "https://localhost:44359",
-        "DemoAuth__Username": "DefaultUser",
-        "DemoAuth__Password": "DefaultPassword123!"
+        "Api__BaseAddress": "https://localhost:44359"
       }
     }
   }

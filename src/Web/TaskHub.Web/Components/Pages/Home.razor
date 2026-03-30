@@ -91,7 +91,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _swaggerUrl = Configuration["TaskHub:Links:SwaggerUrl"];
+        _swaggerUrl = ResolveSwaggerUrl();
 
         if (!Environment.IsDevelopment() && !Environment.IsEnvironment("Testing"))
         {
@@ -100,6 +100,20 @@
         }
 
         await LoadTaskListsPreviewAsync();
+    }
+
+    private string? ResolveSwaggerUrl()
+    {
+        var configuredSwaggerUrl = Configuration["TaskHub:Links:SwaggerUrl"];
+        if (!string.IsNullOrWhiteSpace(configuredSwaggerUrl))
+        {
+            return configuredSwaggerUrl;
+        }
+
+        var apiBaseAddress = Configuration["Api:BaseAddress"];
+        return string.IsNullOrWhiteSpace(apiBaseAddress) 
+            ? null 
+            : $"{apiBaseAddress.TrimEnd('/')}/swagger/index.html";
     }
 
     private async Task LoadTaskListsPreviewAsync()
