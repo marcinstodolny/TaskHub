@@ -51,24 +51,10 @@ Key areas of the repository:
 
 ## Running locally
 
-The easiest local start is through the helper script. It creates `.env` from `.env.example` if needed and then starts Docker Compose.
+You can run the project locally in two ways:
 
-If you run the API or Web project directly from an IDE or from `dotnet run`, the launch profiles also include matching local development values for JWT and demo auth.
-
-On Windows PowerShell:
-
-```powershell
-.\scripts\dev-up.ps1
-```
-
-On macOS or Linux:
-
-```bash
-sh ./scripts/dev-up.sh
-```
-
-If you prefer to do it manually, the repository includes a default local environment template in `.env.example`.
-Create your own `.env` file from it:
+- Run the API and Web projects directly from an IDE or via `dotnet run`. The checked-in launch profiles provide matching local development settings for JWT, demo auth, and the API base address.
+- Run the full stack with Docker Compose. Before startup, create `.env` from `.env.example`:
 
 ```bash
 cp .env.example .env
@@ -88,7 +74,7 @@ Start the full stack with Docker Compose:
 docker compose up --build
 ```
 
-Default endpoints:
+When running with Docker Compose, the default endpoints are:
 
 ```text
 Web: http://localhost:5262
@@ -106,3 +92,4 @@ Tests can be run with `dotnet test`, and the integration suite requires Docker.
 - Evolve the Blazor client beyond the current working pages into a more polished front end.
 - Build out the WPF client so the desktop path moves beyond its current scaffold.
 - Increase automated test coverage as more behavior is added to the solution.
+- Revisit local startup helper scripts after defining a safer cross-platform approach for environment bootstrapping.

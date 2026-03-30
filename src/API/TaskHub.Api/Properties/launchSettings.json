@@ -48,6 +48,12 @@
       "launchBrowser": true,
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/swagger",
       "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Issuer": "TaskHub.Api.Local",
+        "Jwt__Audience": "TaskHub.Clients.Local",
+        "Jwt__SigningKey": "local-dev-jwt-signing-key-change-me-123456789",
+        "DemoAuth__Username": "DefaultUser",
+        "DemoAuth__Password": "DefaultPassword123!",
         "ASPNETCORE_HTTPS_PORTS": "8081",
         "ASPNETCORE_HTTP_PORTS": "8080"
       },
