@@ -116,14 +116,23 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory, ProtectedS
         }
     }
 
-    public string GetRequiredAccessToken()
+    public async Task<string> GetRequiredAccessTokenAsync(CancellationToken ct = default)
     {
-        if (!HasValidToken() || string.IsNullOrWhiteSpace(AccessToken))
+        await _stateLock.WaitAsync(ct);
+        try
         {
-            throw new InvalidOperationException("You need to sign in before calling the API.");
-        }
+            if (!HasValidToken() || string.IsNullOrWhiteSpace(AccessToken))
+            {
+                await InvalidateExpiredSessionAsync();
+                throw new InvalidOperationException("You need to sign in before calling the API.");
+            }
 
-        return AccessToken;
+            return AccessToken;
+        }
+        finally
+        {
+            _stateLock.Release();
+        }
     }
 
     public async Task LogoutAsync(CancellationToken ct = default)
@@ -176,6 +185,17 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory, ProtectedS
         {
             NotifyStateChanged();
         }
+    }
+
+    private async Task InvalidateExpiredSessionAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(AccessToken) || ExpiresAtUtc is not null || !string.IsNullOrWhiteSpace(Username))
+        {
+            await ClearStateAsync();
+            return;
+        }
+
+        NotifyStateChanged();
     }
 
     private void ClearState(bool notify = true)

@@ -4,11 +4,11 @@ namespace TaskHub.Web.Auth;
 
 public sealed class AuthorizedApiClientFactory(IHttpClientFactory httpClientFactory, AuthSession authSession)
 {
-    public Task<HttpClient> CreateAsync(CancellationToken ct = default)
+    public async Task<HttpClient> CreateAsync(CancellationToken ct = default)
     {
         var apiClient = httpClientFactory.CreateClient("TaskHubApi");
-        apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authSession.GetRequiredAccessToken());
+        apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await authSession.GetRequiredAccessTokenAsync(ct));
 
-        return Task.FromResult(apiClient);
+        return apiClient;
     }
 }

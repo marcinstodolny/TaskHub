@@ -13,7 +13,7 @@ public sealed class AuthorizedRequestExecutor(AuthorizedApiClientFactory apiClie
         var client = await apiClientFactory.CreateAsync(ct);
         var response = await request(client);
 
-        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await authSession.LogoutAsync(ct);
         }
