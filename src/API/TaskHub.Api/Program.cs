@@ -1,5 +1,11 @@
-
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
+using TaskHub.Api.Auth;
+using TaskHub.Api.Auth.Options;
 using TaskHub.Application;
 using TaskHub.Infrastructure;
 using TaskHub.Infrastructure.Persistence;
@@ -17,10 +23,82 @@ namespace TaskHub.Api
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(options =>
+            {
+                var bearerScheme = new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Paste your JWT token."
+                };
+
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "TaskHub API",
+                    Version = "v1"
+                });
+
+                options.AddSecurityDefinition("Bearer", bearerScheme);
+
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecuritySchemeReference("Bearer", document, null),
+                        new List<string>()
+                    }
+                });
+            });
             builder.Services.AddSignalR();
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
+
+            builder.Services
+                .AddOptions<JwtOptions>()
+                .BindConfiguration(JwtOptions.SectionName)
+                .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "JWT issuer is not configured.")
+                .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "JWT audience is not configured.")
+                .Validate(options => !string.IsNullOrWhiteSpace(options.SigningKey), "JWT signing key is not configured.")
+                .ValidateOnStart();
+
+            var demoAuthOptionsBuilder = builder.Services
+                .AddOptions<DemoAuthOptions>()
+                .BindConfiguration(DemoAuthOptions.SectionName);
+
+            demoAuthOptionsBuilder
+                .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
+                .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
+                .ValidateOnStart();
+
+            builder.Services.AddSingleton<JwtTokenGenerator>();
+
+            builder.Services
+                .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer();
+
+            builder.Services
+                .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+                .Configure<IOptions<JwtOptions>>((options, jwtOptionsAccessor) =>
+                {
+                    var jwtOptions = jwtOptionsAccessor.Value;
+                    var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
+
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidateLifetime = true,
+                        ValidIssuer = jwtOptions.Issuer,
+                        ValidAudience = jwtOptions.Audience,
+                        IssuerSigningKey = signingKey,
+                        ClockSkew = TimeSpan.Zero,
+                    };
+                });
+
+            builder.Services.AddAuthorization();
 
             var app = builder.Build();
 
@@ -64,6 +142,7 @@ namespace TaskHub.Api
                 app.UseHttpsRedirection();
             }
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
 

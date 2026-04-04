@@ -61,7 +61,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
 
         await fixture.SendAsync(new CreateTaskItemCommand(firstList.Value.Id, "Task A1", "Desc", TaskPriority.Normal));
 
-        using var client = fixture.ApiFactory.CreateClient();
+        using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.GetAsync("/api/TaskList?page=1&count=10");
 
         response.EnsureSuccessStatusCode();

@@ -3,7 +3,7 @@
 @using System.Text.Json
 @using TaskHub.Contracts.Common
 @using TaskHub.Contracts.TaskList
-@inject IHttpClientFactory HttpClientFactory
+@inject Auth.AuthorizedApiClientFactory ApiClientFactory
 @inject IConfiguration Configuration
 @inject IWebHostEnvironment Environment
 
@@ -91,8 +91,34 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _swaggerUrl = Configuration["TaskHub:Links:SwaggerUrl"];
+        _swaggerUrl = ResolveSwaggerUrl();
+
+        if (!Environment.IsDevelopment() && !Environment.IsEnvironment("Testing"))
+        {
+            _errorMessage = "Task preview is available only in local development.";
+            return;
+        }
+
         await LoadTaskListsPreviewAsync();
+    }
+
+    private string? ResolveSwaggerUrl()
+    {
+        var configuredSwaggerUrl = Configuration["TaskHub:Links:SwaggerUrl"];
+        if (!string.IsNullOrWhiteSpace(configuredSwaggerUrl))
+        {
+            return configuredSwaggerUrl;
+        }
+
+        if (!Environment.IsDevelopment())
+        {
+            return null;
+        }
+
+        var apiBaseAddress = Configuration["Api:BaseAddress"];
+        return string.IsNullOrWhiteSpace(apiBaseAddress) 
+            ? null 
+            : $"{apiBaseAddress.TrimEnd('/')}/swagger/index.html";
     }
 
     private async Task LoadTaskListsPreviewAsync()
@@ -102,23 +128,42 @@
 
         try
         {
-            using var apiClient = HttpClientFactory.CreateClient("TaskHubApi");
-            var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
-            if (!response.IsSuccessStatusCode)
-            {
-                _errorMessage = $"Unable to load task lists preview (HTTP {(int)response.StatusCode}).";
-                return;
-            }
+            _taskListsPage = await TryLoadTaskListsPreviewAsync(forceRefreshToken: false) ?? await TryLoadTaskListsPreviewAsync(forceRefreshToken: true);
 
-            _taskListsPage = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
+            if (_taskListsPage is null && string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                _errorMessage = "Unable to load task lists preview right now.";
+            }
         }
-        catch (Exception exception)
+        catch
         {
-            _errorMessage = $"Unable to load task lists preview: {exception.Message}";
+            _errorMessage = "Unable to load task lists preview right now.";
         }
         finally
         {
             _isLoadingTaskLists = false;
         }
+    }
+
+    private async Task<PaginatedResponse<TaskListLightResponse>?> TryLoadTaskListsPreviewAsync(bool forceRefreshToken)
+    {
+        var apiClient = await ApiClientFactory.CreateAsync(forceRefreshToken);
+        using var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
+
+        if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+        {
+            _errorMessage = forceRefreshToken
+                ? "Preview is temporarily unavailable. Please refresh and try again."
+                : null;
+
+            return null;
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
+        }
+        _errorMessage = "Unable to load task lists preview right now.";
+        return null;
     }
 }

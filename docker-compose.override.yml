@@ -4,6 +4,10 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - Api__BaseAddress=http://taskhub.api:8080
+      - DemoAuth__Enabled=${TASKHUB_DEMO_ENABLED}
+      - DemoAuth__Username=${TASKHUB_DEMO_USERNAME}
+      - DemoAuth__Password=${TASKHUB_DEMO_PASSWORD}
+      - TaskHub__Links__SwaggerUrl=http://localhost:8080/swagger/index.html
     depends_on:
       taskhub.api:
         condition: service_started
@@ -16,16 +20,15 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
       - ConnectionStrings__TaskHub=Server=db,1433;Database=TaskHub;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=True
+      - Jwt__Issuer=${TASKHUB_JWT_ISSUER}
+      - Jwt__Audience=${TASKHUB_JWT_AUDIENCE}
+      - Jwt__SigningKey=${TASKHUB_JWT_SIGNING_KEY}
+      - DemoAuth__Enabled=${TASKHUB_DEMO_ENABLED}
+      - DemoAuth__Username=${TASKHUB_DEMO_USERNAME}
+      - DemoAuth__Password=${TASKHUB_DEMO_PASSWORD}
     ports:
       - "8080:8080"
-      - "8081:8081"
-    volumes:
-      - ${USER_SECRETS_PATH:-./.docker/usersecrets}:/home/app/.microsoft/usersecrets:ro
-      - ${USER_SECRETS_PATH:-./.docker/usersecrets}:/root/.microsoft/usersecrets:ro
-      - ${HTTPS_CERTS_PATH:-./.docker/https}:/home/app/.aspnet/https:ro
-      - ${HTTPS_CERTS_PATH:-./.docker/https}:/root/.aspnet/https:ro
 
   db:
     ports:
