@@ -109,6 +109,7 @@ else
     private string? _errorMessage;
     private bool _isSending;
     private bool _isAvailableInCurrentEnvironment;
+    private int _authStateVersion;
 
     protected override void OnInitialized()
     {
@@ -128,10 +129,8 @@ else
 
     private Task HandleAuthStateChangedAsync()
     {
-        if (!AuthSession.IsAuthenticated)
-        {
-            ClearProtectedOutput();
-        }
+        _authStateVersion++;
+        ClearProtectedOutput();
 
         StateHasChanged();
         return Task.CompletedTask;
@@ -139,6 +138,8 @@ else
 
     private async Task SendRequestAsync()
     {
+        var authStateVersion = _authStateVersion;
+
         if (!_isAvailableInCurrentEnvironment)
         {
             _errorMessage = "Endpoint tester is available only in local development.";
@@ -166,8 +167,17 @@ else
         {
             var (response, elapsed) = await SendAuthorizedRequestAsync();
             using var httpResponse = response;
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
 
             var body = await httpResponse.Content.ReadAsStringAsync();
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(body))
             {
                 body = "<empty>";
@@ -181,11 +191,17 @@ else
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            if (IsCurrentAuthState(authStateVersion))
+            {
+                _errorMessage = ex.Message;
+            }
         }
         finally
         {
-            _isSending = false;
+            if (authStateVersion == _authStateVersion)
+            {
+                _isSending = false;
+            }
         }
     }
 
@@ -318,6 +334,8 @@ else
         _errorMessage = null;
         _isSending = false;
     }
+
+    private bool IsCurrentAuthState(int authStateVersion) => authStateVersion == _authStateVersion && AuthSession.IsAuthenticated;
 
     private sealed class EndpointRequest
     {

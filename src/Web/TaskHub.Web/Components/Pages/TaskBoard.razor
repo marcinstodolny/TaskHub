@@ -219,6 +219,7 @@ else
     private bool _isSubmittingTaskList;
     private bool _isSubmittingTask;
     private bool _isDeletingTaskList;
+    private int _authStateVersion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -244,6 +245,8 @@ else
 
     private async Task HandleAuthStateChangedAsync()
     {
+        _authStateVersion++;
+
         if (!AuthSession.IsAuthenticated)
         {
             ResetProtectedUiState();
@@ -251,7 +254,9 @@ else
             return;
         }
 
-        if (_taskLists.Count == 0 && !_isLoadingLists)
+        ResetProtectedUiState();
+
+        if (!_isLoadingLists)
         {
             await LoadTaskListsAsync();
             return;
@@ -284,12 +289,18 @@ else
 
     private async Task LoadTaskListsAsync()
     {
+        var authStateVersion = _authStateVersion;
         _isLoadingLists = true;
         _errorMessage = null;
 
         try
         {
             using var response = await SendAuthorizedAsync(client => client.GetAsync("/api/TaskList?page=1&count=100"));
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
+
             if (!response.IsSuccessStatusCode)
             {
                 _errorMessage = await GetErrorMessageAsync(response, "Unable to load task lists.");
@@ -297,6 +308,11 @@ else
             }
 
             var listResponse = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
+
             _taskLists = listResponse?.Items?.ToList() ?? [];
             _selectedTaskListId ??= _taskLists.FirstOrDefault()?.Id;
 
@@ -311,11 +327,17 @@ else
         }
         catch
         {
-            _errorMessage = "Unable to load task lists.";
+            if (IsCurrentAuthState(authStateVersion))
+            {
+                _errorMessage = "Unable to load task lists.";
+            }
         }
         finally
         {
-            _isLoadingLists = false;
+            if (authStateVersion == _authStateVersion)
+            {
+                _isLoadingLists = false;
+            }
         }
     }
 
@@ -333,12 +355,19 @@ else
             return;
         }
 
+        var authStateVersion = _authStateVersion;
+        var taskListId = _selectedTaskListId.Value;
         _isLoadingBoard = true;
         _errorMessage = null;
 
         try
         {
-            using var response = await SendAuthorizedAsync(client => client.GetAsync($"/api/TaskItem/board/{_selectedTaskListId.Value}"));
+            using var response = await SendAuthorizedAsync(client => client.GetAsync($"/api/TaskItem/board/{taskListId}"));
+            if (!IsCurrentAuthState(authStateVersion) || _selectedTaskListId != taskListId)
+            {
+                return;
+            }
+
             if (!response.IsSuccessStatusCode)
             {
                 _errorMessage = await GetErrorMessageAsync(response, "Unable to load task board.");
@@ -346,15 +375,26 @@ else
             }
 
             var boardTasks = await response.Content.ReadFromJsonAsync<List<TaskCardResponse>>(_serializerOptions);
+            if (!IsCurrentAuthState(authStateVersion) || _selectedTaskListId != taskListId)
+            {
+                return;
+            }
+
             _tasks = boardTasks ?? [];
         }
         catch
         {
-            _errorMessage = "Unable to load task board.";
+            if (IsCurrentAuthState(authStateVersion) && _selectedTaskListId == taskListId)
+            {
+                _errorMessage = "Unable to load task board.";
+            }
         }
         finally
         {
-            _isLoadingBoard = false;
+            if (authStateVersion == _authStateVersion)
+            {
+                _isLoadingBoard = false;
+            }
         }
     }
 
@@ -693,4 +733,6 @@ else
             return fallbackMessage;
         }
     }
+
+    private bool IsCurrentAuthState(int authStateVersion) => authStateVersion == _authStateVersion && AuthSession.IsAuthenticated;
 }

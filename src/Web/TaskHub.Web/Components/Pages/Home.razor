@@ -101,6 +101,7 @@
     private bool _isLoadingTaskLists;
     private string? _errorMessage;
     private string? _swaggerUrl;
+    private int _authStateVersion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,22 +126,18 @@
 
     private async Task HandleAuthStateChangedAsync()
     {
+        _authStateVersion++;
+        _taskListsPage = null;
+        _errorMessage = null;
+        _isLoadingTaskLists = false;
+
         if (!AuthSession.IsAuthenticated)
         {
-            _taskListsPage = null;
-            _errorMessage = null;
-            _isLoadingTaskLists = false;
             StateHasChanged();
             return;
         }
 
-        if (_taskListsPage is null && !_isLoadingTaskLists)
-        {
-            await LoadTaskListsPreviewAsync();
-            return;
-        }
-
-        StateHasChanged();
+        await LoadTaskListsPreviewAsync();
     }
 
     private string? ResolveSwaggerUrl()
@@ -164,26 +161,43 @@
 
     private async Task LoadTaskListsPreviewAsync()
     {
+        var authStateVersion = _authStateVersion;
         _isLoadingTaskLists = true;
         _errorMessage = null;
 
         try
         {
-            _taskListsPage = await TryLoadTaskListsPreviewAsync();
+            var taskListsPage = await TryLoadTaskListsPreviewAsync(authStateVersion);
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
+
+            _taskListsPage = taskListsPage;
         }
         catch
         {
-            _errorMessage = "Unable to load task lists preview right now.";
+            if (IsCurrentAuthState(authStateVersion))
+            {
+                _errorMessage = "Unable to load task lists preview right now.";
+            }
         }
         finally
         {
-            _isLoadingTaskLists = false;
+            if (authStateVersion == _authStateVersion)
+            {
+                _isLoadingTaskLists = false;
+            }
         }
     }
 
-    private async Task<PaginatedResponse<TaskListLightResponse>?> TryLoadTaskListsPreviewAsync()
+    private async Task<PaginatedResponse<TaskListLightResponse>?> TryLoadTaskListsPreviewAsync(int authStateVersion)
     {
         using var response = await AuthorizedRequestExecutor.SendAsync(client => client.GetAsync("/api/TaskList?page=1&count=10"));
+        if (!IsCurrentAuthState(authStateVersion))
+        {
+            return null;
+        }
 
         if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
         {
@@ -199,4 +213,6 @@
         _errorMessage = "Unable to load task lists preview right now.";
         return null;
     }
+
+    private bool IsCurrentAuthState(int authStateVersion) => authStateVersion == _authStateVersion && AuthSession.IsAuthenticated;
 }
