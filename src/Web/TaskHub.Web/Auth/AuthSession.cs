@@ -59,7 +59,7 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory, ProtectedS
     {
         var normalizedUsername = username.Trim();
 
-        if (string.IsNullOrWhiteSpace(normalizedUsername) || string.IsNullOrWhiteSpace(password))
+        if (string.IsNullOrWhiteSpace(normalizedUsername) || string.IsNullOrEmpty(password))
         {
             return AuthLoginResult.Failure("Username and password are required.");
         }

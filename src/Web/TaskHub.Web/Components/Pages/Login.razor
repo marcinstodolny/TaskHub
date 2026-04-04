@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 @using System.ComponentModel.DataAnnotations
+@using System.Text.Json
 @using TaskHub.Web.Auth
 @inject AuthSession AuthSession
 @inject NavigationManager Navigation
@@ -97,6 +98,10 @@
 
             Navigation.NavigateTo(GetReturnUrl());
         }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or NotSupportedException)
+        {
+            _errorMessage = "Unable to sign in right now. Please try again.";
+        }
         finally
         {
             _isSubmitting = false;
@@ -135,7 +140,12 @@
             return false;
         }
 
-        return Uri.TryCreate(returnUrl, UriKind.Relative, out _);
+        if (!Uri.TryCreate(returnUrl, UriKind.RelativeOrAbsolute, out var parsedUri))
+        {
+            return false;
+        }
+
+        return !parsedUri.IsAbsoluteUri;
     }
 
     private sealed class LoginFormModel
