@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using TaskHub.Web.Auth;
 using TaskHub.Web.Components;
 
@@ -9,6 +10,7 @@ var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? "https://localh
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<AuthSession>();
 builder.Services.AddScoped<AuthorizedApiClientFactory>();
 builder.Services.AddScoped<AuthorizedRequestExecutor>();

@@ -1,13 +1,17 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using TaskHub.Contracts.Auth;
 
 namespace TaskHub.Web.Auth;
 
-public sealed class AuthSession(IHttpClientFactory httpClientFactory)
+public sealed class AuthSession(IHttpClientFactory httpClientFactory, ProtectedSessionStorage protectedSessionStorage)
 {
+    private const string StorageKey = "taskhub.auth-session";
+
     private readonly SemaphoreSlim _stateLock = new(1, 1);
 
+    public bool IsInitialized { get; private set; }
     public bool IsAuthenticated => HasValidToken();
     public string? Username { get; private set; }
     public string? AccessToken { get; private set; }
@@ -15,12 +19,47 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory)
 
     public event Action? StateChanged;
 
+    public async Task InitializeAsync(CancellationToken ct = default)
+    {
+        if (IsInitialized)
+        {
+            return;
+        }
+
+        await _stateLock.WaitAsync(ct);
+        try
+        {
+            if (IsInitialized)
+            {
+                return;
+            }
+
+            var storedSession = await protectedSessionStorage.GetAsync<PersistedAuthSession>(StorageKey);
+            if (storedSession.Success && storedSession.Value is not null)
+            {
+                ApplyState(storedSession.Value.Username, storedSession.Value.AccessToken, storedSession.Value.ExpiresAtUtc);
+
+                if (!HasValidToken())
+                {
+                    ClearState(notify: false);
+                    await protectedSessionStorage.DeleteAsync(StorageKey);
+                }
+            }
+
+            IsInitialized = true;
+            NotifyStateChanged();
+        }
+        finally
+        {
+            _stateLock.Release();
+        }
+    }
+
     public async Task<AuthLoginResult> LoginAsync(string username, string password, CancellationToken ct = default)
     {
         var normalizedUsername = username.Trim();
-        var normalizedPassword = password.Trim();
 
-        if (string.IsNullOrWhiteSpace(normalizedUsername) || string.IsNullOrWhiteSpace(normalizedPassword))
+        if (string.IsNullOrWhiteSpace(normalizedUsername) || string.IsNullOrWhiteSpace(password))
         {
             return AuthLoginResult.Failure("Username and password are required.");
         }
@@ -28,45 +67,45 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory)
         await _stateLock.WaitAsync(ct);
         try
         {
-            var tokenRequest = new TokenRequest(normalizedUsername, normalizedPassword);
+            var tokenRequest = new TokenRequest(normalizedUsername, password);
             var apiClient = httpClientFactory.CreateClient("TaskHubApi");
             using var response = await apiClient.PostAsJsonAsync("/api/auth/token", tokenRequest, ct);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                ClearState(notify: false);
+                await ClearStateAsync(notify: false);
                 return AuthLoginResult.Failure("Invalid username or password.");
             }
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                ClearState(notify: false);
+                await ClearStateAsync(notify: false);
                 return AuthLoginResult.Failure("Login is currently unavailable.");
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                ClearState(notify: false);
+                await ClearStateAsync(notify: false);
                 return AuthLoginResult.Failure("Unable to sign in right now. Please try again.");
             }
 
             var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct);
             if (string.IsNullOrWhiteSpace(tokenResponse?.AccessToken))
             {
-                ClearState(notify: false);
+                await ClearStateAsync(notify: false);
                 return AuthLoginResult.Failure("The API returned an invalid token.");
             }
 
             var expiresAtUtc = ResolveExpirationUtc(tokenResponse.AccessToken);
             if (expiresAtUtc is null)
             {
-                ClearState(notify: false);
+                await ClearStateAsync(notify: false);
                 return AuthLoginResult.Failure("The API returned a token without a valid expiration.");
             }
 
-            Username = normalizedUsername;
-            AccessToken = tokenResponse.AccessToken;
-            ExpiresAtUtc = expiresAtUtc;
+            ApplyState(normalizedUsername, tokenResponse.AccessToken, expiresAtUtc.Value);
+            await PersistStateAsync();
+            IsInitialized = true;
 
             NotifyStateChanged();
             return AuthLoginResult.Success();
@@ -87,9 +126,17 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory)
         return AccessToken;
     }
 
-    public void Logout()
+    public async Task LogoutAsync(CancellationToken ct = default)
     {
-        ClearState();
+        await _stateLock.WaitAsync(ct);
+        try
+        {
+            await ClearStateAsync();
+        }
+        finally
+        {
+            _stateLock.Release();
+        }
     }
 
     private bool HasValidToken()
@@ -100,6 +147,35 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory)
         }
 
         return ExpiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(1);
+    }
+
+    private void ApplyState(string username, string accessToken, DateTimeOffset expiresAtUtc)
+    {
+        Username = username;
+        AccessToken = accessToken;
+        ExpiresAtUtc = expiresAtUtc;
+    }
+
+    private async Task PersistStateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(AccessToken) || ExpiresAtUtc is null)
+        {
+            return;
+        }
+
+        var persistedSession = new PersistedAuthSession(Username, AccessToken, ExpiresAtUtc.Value);
+        await protectedSessionStorage.SetAsync(StorageKey, persistedSession);
+    }
+
+    private async Task ClearStateAsync(bool notify = true)
+    {
+        ClearState(notify: false);
+        await protectedSessionStorage.DeleteAsync(StorageKey);
+
+        if (notify)
+        {
+            NotifyStateChanged();
+        }
     }
 
     private void ClearState(bool notify = true)
@@ -165,3 +241,5 @@ public readonly record struct AuthLoginResult(bool Succeeded, string? ErrorMessa
     public static AuthLoginResult Success() => new(true, null);
     public static AuthLoginResult Failure(string errorMessage) => new(false, errorMessage);
 }
+
+internal sealed record PersistedAuthSession(string Username, string AccessToken, DateTimeOffset ExpiresAtUtc);

@@ -1,5 +1,6 @@
 @page "/endpoint-tester"
 @rendermode InteractiveServer
+@implements IDisposable
 @using System.Net
 @using System.Net.Http.Headers
 @using System.Text
@@ -112,6 +113,17 @@ else
     protected override void OnInitialized()
     {
         _isAvailableInCurrentEnvironment = Environment.IsDevelopment() || Environment.IsEnvironment("Testing");
+        AuthSession.StateChanged += OnAuthStateChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthSession.StateChanged -= OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private async Task SendRequestAsync()

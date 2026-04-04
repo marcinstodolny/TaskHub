@@ -15,7 +15,7 @@ public sealed class AuthorizedRequestExecutor(AuthorizedApiClientFactory apiClie
 
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
-            authSession.Logout();
+            await authSession.LogoutAsync(ct);
         }
 
         return response;

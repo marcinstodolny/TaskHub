@@ -39,7 +39,7 @@
             </div>
 
             <div class="nav-item px-3">
-                <button type="button" class="nav-link logout-button" @onclick="OnLogoutClicked">
+                <button type="button" class="nav-link logout-button" @onclick="OnLogoutClickedAsync">
                     <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Logout
                 </button>
             </div>
@@ -68,9 +68,9 @@
         AuthSession.StateChanged -= OnAuthStateChanged;
     }
 
-    private void OnLogoutClicked()
+    private async Task OnLogoutClickedAsync()
     {
-        AuthSession.Logout();
+        await AuthSession.LogoutAsync();
         Navigation.NavigateTo("/login");
     }
 

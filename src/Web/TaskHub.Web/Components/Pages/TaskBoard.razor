@@ -1,5 +1,6 @@
 @page "/task-board"
 @rendermode InteractiveServer
+@implements IDisposable
 @using System.Text.Json
 @using TaskHub.Domain.Enums
 @using TaskHub.Contracts.Common
@@ -221,12 +222,48 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        AuthSession.StateChanged += OnAuthStateChanged;
+
         if (!AuthSession.IsAuthenticated)
         {
             return;
         }
 
         await LoadTaskListsAsync();
+    }
+
+    public void Dispose()
+    {
+        AuthSession.StateChanged -= OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        _ = InvokeAsync(HandleAuthStateChangedAsync);
+    }
+
+    private async Task HandleAuthStateChangedAsync()
+    {
+        if (!AuthSession.IsAuthenticated)
+        {
+            _taskLists = [];
+            _tasks = [];
+            _selectedTaskListId = null;
+            _editingTaskId = null;
+            _errorMessage = null;
+            _isLoadingLists = false;
+            _isLoadingBoard = false;
+            StateHasChanged();
+            return;
+        }
+
+        if (_taskLists.Count == 0 && !_isLoadingLists)
+        {
+            await LoadTaskListsAsync();
+            return;
+        }
+
+        StateHasChanged();
     }
 
     private async Task LoadTaskListsAsync()

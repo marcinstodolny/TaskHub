@@ -1,5 +1,6 @@
 @page "/login"
 @rendermode InteractiveServer
+@implements IDisposable
 @using System.ComponentModel.DataAnnotations
 @using TaskHub.Web.Auth
 @inject AuthSession AuthSession
@@ -19,7 +20,7 @@
 
             <div class="d-flex gap-2">
                 <a class="btn btn-primary" href="@GetReturnUrl()">Continue</a>
-                <button type="button" class="btn btn-outline-secondary" @onclick="OnLogoutClicked">Logout</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnLogoutClickedAsync">Logout</button>
             </div>
         }
         else
@@ -70,6 +71,16 @@
     private string? _errorMessage;
     private bool _isSubmitting;
 
+    protected override void OnInitialized()
+    {
+        AuthSession.StateChanged += OnAuthStateChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthSession.StateChanged -= OnAuthStateChanged;
+    }
+
     private async Task OnLoginSubmittedAsync()
     {
         _errorMessage = null;
@@ -92,19 +103,39 @@
         }
     }
 
-    private void OnLogoutClicked()
+    private async Task OnLogoutClickedAsync()
     {
-        AuthSession.Logout();
+        await AuthSession.LogoutAsync();
+    }
+
+    private void OnAuthStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private string GetReturnUrl()
     {
-        if (string.IsNullOrWhiteSpace(ReturnUrl) || !ReturnUrl.StartsWith('/'))
+        if (!IsSafeLocalReturnUrl(ReturnUrl))
         {
             return "/task-board";
         }
 
-        return ReturnUrl;
+        return ReturnUrl!;
+    }
+
+    private static bool IsSafeLocalReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl) || !returnUrl.StartsWith('/'))
+        {
+            return false;
+        }
+
+        if (returnUrl.StartsWith("//", StringComparison.Ordinal) || returnUrl.StartsWith("/\\", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return Uri.TryCreate(returnUrl, UriKind.Relative, out _);
     }
 
     private sealed class LoginFormModel
