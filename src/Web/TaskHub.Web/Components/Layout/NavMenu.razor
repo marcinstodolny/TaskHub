@@ -1,4 +1,8 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+@implements IDisposable
+@inject TaskHub.Web.Auth.AuthSession AuthSession
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">TaskHub.Web</a>
     </div>
@@ -25,5 +29,59 @@
                 <span class="bi bi-cloud-arrow-up-fill-nav-menu" aria-hidden="true"></span> Endpoint Tester
             </NavLink>
         </div>
+
+        @if (AuthSession.IsAuthenticated)
+        {
+            <div class="nav-item px-3">
+                <div class="nav-link auth-summary">
+                    <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Signed in as @AuthSession.Username
+                </div>
+            </div>
+
+            <div class="nav-item px-3">
+                <button type="button" class="nav-link logout-button" @onclick="OnLogoutClickedAsync">
+                    <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Logout
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="@LoginUrl">
+                    <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Login
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
+
+@code {
+    private string LoginUrl => $"/login?returnUrl={Uri.EscapeDataString(GetCurrentPath())}";
+
+    protected override void OnInitialized()
+    {
+        AuthSession.StateChanged += OnAuthStateChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthSession.StateChanged -= OnAuthStateChanged;
+    }
+
+    private async Task OnLogoutClickedAsync()
+    {
+        await AuthSession.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+
+    private void OnAuthStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string GetCurrentPath()
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return string.IsNullOrWhiteSpace(relativePath) ? "/" : $"/{relativePath}";
+    }
+}

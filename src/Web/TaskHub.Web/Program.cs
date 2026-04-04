@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using TaskHub.Web.Auth;
 using TaskHub.Web.Components;
 
@@ -5,20 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? "https://localhost:7040";
 
-var demoAuthOptionsBuilder = builder.Services
-    .AddOptions<DemoAuthOptions>()
-    .BindConfiguration(DemoAuthOptions.SectionName);
-
-demoAuthOptionsBuilder
-    .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
-    .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
-    .ValidateOnStart();
-
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped<DemoAccessTokenProvider>();
+builder.Services.AddScoped<ProtectedSessionStorage>();
+builder.Services.AddScoped<AuthSession>();
 builder.Services.AddScoped<AuthorizedApiClientFactory>();
 builder.Services.AddScoped<AuthorizedRequestExecutor>();
 

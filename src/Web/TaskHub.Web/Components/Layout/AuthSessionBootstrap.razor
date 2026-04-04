@@ -1,0 +1,13 @@
+@inject TaskHub.Web.Auth.AuthSession AuthSession
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await AuthSession.InitializeAsync();
+    }
+}

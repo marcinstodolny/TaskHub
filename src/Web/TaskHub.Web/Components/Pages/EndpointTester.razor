@@ -1,11 +1,13 @@
 @page "/endpoint-tester"
 @rendermode InteractiveServer
+@implements IDisposable
 @using System.Net
 @using System.Net.Http.Headers
 @using System.Text
 @using System.Text.Json
 @using Microsoft.AspNetCore.WebUtilities
 @using TaskHub.Web.Auth
+@inject AuthSession AuthSession
 @inject AuthorizedRequestExecutor AuthorizedRequestExecutor
 @inject IWebHostEnvironment Environment
 
@@ -13,15 +15,23 @@
 
 <h1>Endpoint Tester</h1>
 
-@if (_isDemoModeDisabled)
+@if (!_isAvailableInCurrentEnvironment)
 {
     <div class="alert alert-secondary" role="alert">
         Endpoint tester is available only in local development.
     </div>
 }
+else if (!AuthSession.IsAuthenticated)
+{
+    <div class="alert alert-info" role="alert">
+        Sign in to send authenticated API requests from the endpoint tester.
+    </div>
+
+    <a class="btn btn-primary" href="/login?returnUrl=%2Fendpoint-tester">Login to continue</a>
+}
 else
 {
-    <p class="text-muted">Use this page to test TaskHub API endpoints without Swagger. Requests automatically include the demo JWT.</p>
+    <p class="text-muted">Use this page to test TaskHub API endpoints without Swagger. Requests automatically include the token from the current web session.</p>
 
     <div class="card mb-4">
         <div class="card-body">
@@ -98,18 +108,47 @@ else
     private EndpointResponse? _response;
     private string? _errorMessage;
     private bool _isSending;
-    private bool _isDemoModeDisabled;
+    private bool _isAvailableInCurrentEnvironment;
+    private int _authStateVersion;
 
     protected override void OnInitialized()
     {
-        _isDemoModeDisabled = !Environment.IsDevelopment() && !Environment.IsEnvironment("Testing");
+        _isAvailableInCurrentEnvironment = Environment.IsDevelopment() || Environment.IsEnvironment("Testing");
+        AuthSession.StateChanged += OnAuthStateChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthSession.StateChanged -= OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        _ = InvokeAsync(HandleAuthStateChangedAsync);
+    }
+
+    private Task HandleAuthStateChangedAsync()
+    {
+        _authStateVersion++;
+        ClearProtectedOutput();
+
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task SendRequestAsync()
     {
-        if (_isDemoModeDisabled)
+        var authStateVersion = _authStateVersion;
+
+        if (!_isAvailableInCurrentEnvironment)
         {
             _errorMessage = "Endpoint tester is available only in local development.";
+            return;
+        }
+
+        if (!AuthSession.IsAuthenticated)
+        {
+            _errorMessage = "Sign in before sending authenticated API requests.";
             return;
         }
 
@@ -128,8 +167,17 @@ else
         {
             var (response, elapsed) = await SendAuthorizedRequestAsync();
             using var httpResponse = response;
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
 
             var body = await httpResponse.Content.ReadAsStringAsync();
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(body))
             {
                 body = "<empty>";
@@ -143,11 +191,17 @@ else
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            if (IsCurrentAuthState(authStateVersion))
+            {
+                _errorMessage = ex.Message;
+            }
         }
         finally
         {
-            _isSending = false;
+            if (authStateVersion == _authStateVersion)
+            {
+                _isSending = false;
+            }
         }
     }
 
@@ -198,7 +252,7 @@ else
         {
             using var message = CreateRequestMessage();
             return await client.SendAsync(message);
-        }, retryOnForbidden: false);
+        });
 
         var elapsed = DateTime.UtcNow - startedAt;
         return (response, elapsed);
@@ -273,6 +327,15 @@ else
             Priority = 1
         }, _serializerOptions);
     }
+
+    private void ClearProtectedOutput()
+    {
+        _response = null;
+        _errorMessage = null;
+        _isSending = false;
+    }
+
+    private bool IsCurrentAuthState(int authStateVersion) => authStateVersion == _authStateVersion && AuthSession.IsAuthenticated;
 
     private sealed class EndpointRequest
     {

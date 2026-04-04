@@ -1,9 +1,12 @@
 @page "/"
 @rendermode InteractiveServer
+@implements IDisposable
 @using System.Text.Json
 @using TaskHub.Contracts.Common
 @using TaskHub.Contracts.TaskList
-@inject Auth.AuthorizedApiClientFactory ApiClientFactory
+@using TaskHub.Web.Auth
+@inject AuthSession AuthSession
+@inject AuthorizedRequestExecutor AuthorizedRequestExecutor
 @inject IConfiguration Configuration
 @inject IWebHostEnvironment Environment
 
@@ -23,6 +26,10 @@
     <h2 class="h4">Quick actions</h2>
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-primary" href="/task-board">Task Board</a>
+        @if (!AuthSession.IsAuthenticated)
+        {
+            <a class="btn btn-outline-primary" href="/login?returnUrl=%2Ftask-board">Login</a>
+        }
         @if (!string.IsNullOrWhiteSpace(_swaggerUrl))
         {
             <a class="btn btn-outline-secondary" href="@_swaggerUrl" target="_blank" rel="noopener noreferrer">Swagger</a>
@@ -37,12 +44,18 @@
 <section>
     <h2 class="h4">Task Lists (preview)</h2>
 
-    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    @if (!AuthSession.IsAuthenticated)
+    {
+        <div class="alert alert-info" role="alert">
+            Sign in to load your task lists preview.
+        </div>
+        <a class="btn btn-primary" href="/login?returnUrl=%2F">Login to continue</a>
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
         <div class="alert alert-danger" role="alert">@_errorMessage</div>
     }
-
-    @if (_isLoadingTaskLists)
+    else if (_isLoadingTaskLists)
     {
         <div class="alert alert-info" role="status">Loading task lists preview...</div>
     }
@@ -88,14 +101,39 @@
     private bool _isLoadingTaskLists;
     private string? _errorMessage;
     private string? _swaggerUrl;
+    private int _authStateVersion;
 
     protected override async Task OnInitializedAsync()
     {
         _swaggerUrl = ResolveSwaggerUrl();
+        AuthSession.StateChanged += OnAuthStateChanged;
 
-        if (!Environment.IsDevelopment() && !Environment.IsEnvironment("Testing"))
+        if (AuthSession.IsAuthenticated)
         {
-            _errorMessage = "Task preview is available only in local development.";
+            await LoadTaskListsPreviewAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthSession.StateChanged -= OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        _ = InvokeAsync(HandleAuthStateChangedAsync);
+    }
+
+    private async Task HandleAuthStateChangedAsync()
+    {
+        _authStateVersion++;
+        _taskListsPage = null;
+        _errorMessage = null;
+        _isLoadingTaskLists = false;
+
+        if (!AuthSession.IsAuthenticated)
+        {
+            StateHasChanged();
             return;
         }
 
@@ -116,46 +154,54 @@
         }
 
         var apiBaseAddress = Configuration["Api:BaseAddress"];
-        return string.IsNullOrWhiteSpace(apiBaseAddress) 
-            ? null 
+        return string.IsNullOrWhiteSpace(apiBaseAddress)
+            ? null
             : $"{apiBaseAddress.TrimEnd('/')}/swagger/index.html";
     }
 
     private async Task LoadTaskListsPreviewAsync()
     {
+        var authStateVersion = _authStateVersion;
         _isLoadingTaskLists = true;
         _errorMessage = null;
 
         try
         {
-            _taskListsPage = await TryLoadTaskListsPreviewAsync(forceRefreshToken: false) ?? await TryLoadTaskListsPreviewAsync(forceRefreshToken: true);
+            var taskListsPage = await TryLoadTaskListsPreviewAsync(authStateVersion);
+            if (!IsCurrentAuthState(authStateVersion))
+            {
+                return;
+            }
 
-            if (_taskListsPage is null && string.IsNullOrWhiteSpace(_errorMessage))
+            _taskListsPage = taskListsPage;
+        }
+        catch
+        {
+            if (IsCurrentAuthState(authStateVersion))
             {
                 _errorMessage = "Unable to load task lists preview right now.";
             }
         }
-        catch
-        {
-            _errorMessage = "Unable to load task lists preview right now.";
-        }
         finally
         {
-            _isLoadingTaskLists = false;
+            if (authStateVersion == _authStateVersion)
+            {
+                _isLoadingTaskLists = false;
+            }
         }
     }
 
-    private async Task<PaginatedResponse<TaskListLightResponse>?> TryLoadTaskListsPreviewAsync(bool forceRefreshToken)
+    private async Task<PaginatedResponse<TaskListLightResponse>?> TryLoadTaskListsPreviewAsync(int authStateVersion)
     {
-        var apiClient = await ApiClientFactory.CreateAsync(forceRefreshToken);
-        using var response = await apiClient.GetAsync("/api/TaskList?page=1&count=10");
+        using var response = await AuthorizedRequestExecutor.SendAsync(client => client.GetAsync("/api/TaskList?page=1&count=10"));
+        if (!IsCurrentAuthState(authStateVersion))
+        {
+            return null;
+        }
 
         if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
         {
-            _errorMessage = forceRefreshToken
-                ? "Preview is temporarily unavailable. Please refresh and try again."
-                : null;
-
+            _errorMessage = "Your session expired. Sign in again to load the preview.";
             return null;
         }
 
@@ -163,7 +209,10 @@
         {
             return await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
         }
+
         _errorMessage = "Unable to load task lists preview right now.";
         return null;
     }
+
+    private bool IsCurrentAuthState(int authStateVersion) => authStateVersion == _authStateVersion && AuthSession.IsAuthenticated;
 }
