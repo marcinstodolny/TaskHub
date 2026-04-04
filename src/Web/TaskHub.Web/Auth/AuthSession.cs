@@ -34,7 +34,7 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory, ProtectedS
                 return;
             }
 
-            var storedSession = await protectedSessionStorage.GetAsync<PersistedAuthSession>(StorageKey);
+            var storedSession = await ReadPersistedSessionAsync();
             if (storedSession.Success && storedSession.Value is not null)
             {
                 ApplyState(storedSession.Value.Username, storedSession.Value.AccessToken, storedSession.Value.ExpiresAtUtc);
@@ -52,6 +52,29 @@ public sealed class AuthSession(IHttpClientFactory httpClientFactory, ProtectedS
         finally
         {
             _stateLock.Release();
+        }
+    }
+
+    private async Task<ProtectedBrowserStorageResult<PersistedAuthSession>> ReadPersistedSessionAsync()
+    {
+        try
+        {
+            return await protectedSessionStorage.GetAsync<PersistedAuthSession>(StorageKey);
+        }
+        catch
+        {
+            ClearState(notify: false);
+
+            try
+            {
+                await protectedSessionStorage.DeleteAsync(StorageKey);
+            }
+            catch
+            {
+                // Startup should still continue as signed out even if cleanup also fails.
+            }
+
+            return default;
         }
     }
 
