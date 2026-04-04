@@ -7,51 +7,61 @@
 @using Microsoft.AspNetCore.WebUtilities
 @using TaskHub.Web.Auth
 @inject AuthorizedRequestExecutor AuthorizedRequestExecutor
+@inject IWebHostEnvironment Environment
 
 <PageTitle>Endpoint Tester</PageTitle>
 
 <h1>Endpoint Tester</h1>
 
-<p class="text-muted">Use this page to test TaskHub API endpoints without Swagger. Requests automatically include the demo JWT.</p>
-
-<div class="card mb-4">
-    <div class="card-body">
-        <EditForm Model="_request" OnSubmit="SendRequestAsync">
-            <div class="row g-3">
-                <div class="col-md-2">
-                    <label class="form-label" for="httpMethod">Method</label>
-                    <InputSelect id="httpMethod" class="form-select" @bind-Value="_request.Method">
-                        @foreach (var method in Methods)
-                        {
-                            <option value="@method">@method</option>
-                        }
-                    </InputSelect>
-                </div>
-                <div class="col-md-10">
-                    <label class="form-label" for="endpointPath">Path</label>
-                    <InputText id="endpointPath" class="form-control" @bind-Value="_request.Path" placeholder="/api/TaskList" />
-                </div>
-            </div>
-
-            <div class="mt-3">
-                <label class="form-label" for="queryString">Query string (optional)</label>
-                <InputText id="queryString" class="form-control" @bind-Value="_request.QueryString" placeholder="page=1&pageSize=10" />
-            </div>
-
-            <div class="mt-3">
-                <label class="form-label" for="requestBody">JSON Body (optional)</label>
-                <InputTextArea id="requestBody" class="form-control font-monospace" rows="8" @bind-Value="_request.Body" />
-            </div>
-
-            <div class="mt-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary" disabled="@_isSending">Send</button>
-                <button type="button" class="btn btn-outline-secondary" @onclick="LoadTaskListTemplate">GET Task Lists</button>
-                <button type="button" class="btn btn-outline-secondary" @onclick="LoadCreateTaskListTemplate">POST Task List</button>
-                <button type="button" class="btn btn-outline-secondary" @onclick="LoadCreateTaskItemTemplate">POST Task Item</button>
-            </div>
-        </EditForm>
+@if (_isDemoModeDisabled)
+{
+    <div class="alert alert-secondary" role="alert">
+        Endpoint tester is available only in local development.
     </div>
-</div>
+}
+else
+{
+    <p class="text-muted">Use this page to test TaskHub API endpoints without Swagger. Requests automatically include the demo JWT.</p>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <EditForm Model="_request" OnSubmit="SendRequestAsync">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label" for="httpMethod">Method</label>
+                        <InputSelect id="httpMethod" class="form-select" @bind-Value="_request.Method">
+                            @foreach (var method in Methods)
+                            {
+                                <option value="@method">@method</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-10">
+                        <label class="form-label" for="endpointPath">Path</label>
+                        <InputText id="endpointPath" class="form-control" @bind-Value="_request.Path" placeholder="/api/TaskList" />
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label" for="queryString">Query string (optional)</label>
+                    <InputText id="queryString" class="form-control" @bind-Value="_request.QueryString" placeholder="page=1&pageSize=10" />
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label" for="requestBody">JSON Body (optional)</label>
+                    <InputTextArea id="requestBody" class="form-control font-monospace" rows="8" @bind-Value="_request.Body" />
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@_isSending">Send</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="LoadTaskListTemplate">GET Task Lists</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="LoadCreateTaskListTemplate">POST Task List</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="LoadCreateTaskItemTemplate">POST Task Item</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
@@ -88,9 +98,21 @@
     private EndpointResponse? _response;
     private string? _errorMessage;
     private bool _isSending;
+    private bool _isDemoModeDisabled;
+
+    protected override void OnInitialized()
+    {
+        _isDemoModeDisabled = !Environment.IsDevelopment() && !Environment.IsEnvironment("Testing");
+    }
 
     private async Task SendRequestAsync()
     {
+        if (_isDemoModeDisabled)
+        {
+            _errorMessage = "Endpoint tester is available only in local development.";
+            return;
+        }
+
         _errorMessage = null;
         _response = null;
 
@@ -210,22 +232,13 @@
     {
         var code = (int)statusCode;
 
-        if (code >= 200 && code < 300)
+        return code switch
         {
-            return "bg-success";
-        }
-
-        if (code >= 400 && code < 500)
-        {
-            return "bg-warning text-dark";
-        }
-
-        if (code >= 500)
-        {
-            return "bg-danger";
-        }
-
-        return "bg-secondary";
+            >= 200 and < 300 => "bg-success",
+            >= 400 and < 500 => "bg-warning text-dark",
+            >= 500 => "bg-danger",
+            _ => "bg-secondary"
+        };
     }
 
     private void LoadTaskListTemplate()
