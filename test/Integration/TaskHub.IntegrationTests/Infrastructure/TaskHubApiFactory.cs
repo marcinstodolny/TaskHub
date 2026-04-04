@@ -28,6 +28,7 @@ public class TaskHubApiFactory(TaskHubMsSqlFixture database) : WebApplicationFac
                 ["Jwt:Audience"] = "TaskHub.IntegrationTests",
                 ["Jwt:SigningKey"] = "taskhub-integration-tests-signing-key-123",
                 ["Jwt:ExpiresInMinutes"] = "60",
+                ["DemoAuth:Enabled"] = "true",
                 ["DemoAuth:Username"] = TestUsername,
                 ["DemoAuth:Password"] = TestPassword,
             });
