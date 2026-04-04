@@ -123,7 +123,18 @@ else
 
     private void OnAuthStateChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(HandleAuthStateChangedAsync);
+    }
+
+    private Task HandleAuthStateChangedAsync()
+    {
+        if (!AuthSession.IsAuthenticated)
+        {
+            ClearProtectedOutput();
+        }
+
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task SendRequestAsync()
@@ -299,6 +310,13 @@ else
             Description = "Milk, eggs, and bread",
             Priority = 1
         }, _serializerOptions);
+    }
+
+    private void ClearProtectedOutput()
+    {
+        _response = null;
+        _errorMessage = null;
+        _isSending = false;
     }
 
     private sealed class EndpointRequest

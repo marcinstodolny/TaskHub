@@ -246,13 +246,7 @@ else
     {
         if (!AuthSession.IsAuthenticated)
         {
-            _taskLists = [];
-            _tasks = [];
-            _selectedTaskListId = null;
-            _editingTaskId = null;
-            _errorMessage = null;
-            _isLoadingLists = false;
-            _isLoadingBoard = false;
+            ResetProtectedUiState();
             StateHasChanged();
             return;
         }
@@ -264,6 +258,28 @@ else
         }
 
         StateHasChanged();
+    }
+
+    private void ResetProtectedUiState()
+    {
+        _taskLists = [];
+        _tasks = [];
+        _selectedTaskListId = null;
+        _editingTaskId = null;
+        _errorMessage = null;
+        _isLoadingLists = false;
+        _isLoadingBoard = false;
+        _isCreatingTaskList = false;
+        _isRenamingTaskList = false;
+        _isSubmittingTaskList = false;
+        _isSubmittingTask = false;
+        _isDeletingTaskList = false;
+        _taskListForm.Title = string.Empty;
+        _taskForm.Title = string.Empty;
+        _taskForm.Description = string.Empty;
+        _taskForm.Priority = TaskPriority.Normal;
+        _updatingTaskIds.Clear();
+        _deletingTaskIds.Clear();
     }
 
     private async Task LoadTaskListsAsync()

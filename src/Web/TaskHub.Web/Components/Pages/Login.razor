@@ -98,7 +98,7 @@
 
             Navigation.NavigateTo(GetReturnUrl());
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or NotSupportedException)
+        catch (Exception)
         {
             _errorMessage = "Unable to sign in right now. Please try again.";
         }
