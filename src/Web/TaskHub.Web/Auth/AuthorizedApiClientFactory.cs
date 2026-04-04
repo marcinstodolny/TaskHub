@@ -2,15 +2,13 @@ using System.Net.Http.Headers;
 
 namespace TaskHub.Web.Auth;
 
-public sealed class AuthorizedApiClientFactory(IHttpClientFactory httpClientFactory, DemoAccessTokenProvider tokenProvider)
+public sealed class AuthorizedApiClientFactory(IHttpClientFactory httpClientFactory, AuthSession authSession)
 {
-    public async Task<HttpClient> CreateAsync(bool forceRefresh = false, CancellationToken ct = default)
+    public Task<HttpClient> CreateAsync(CancellationToken ct = default)
     {
-        var accessToken = await tokenProvider.GetAccessTokenAsync(forceRefresh, ct);
-
         var apiClient = httpClientFactory.CreateClient("TaskHubApi");
-        apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authSession.GetRequiredAccessToken());
 
-        return apiClient;
+        return Task.FromResult(apiClient);
     }
 }
