@@ -7,6 +7,7 @@ using Microsoft.OpenApi;
 using TaskHub.Api.Auth;
 using TaskHub.Api.Auth.Options;
 using TaskHub.Application;
+using TaskHub.Application.abstraction;
 using TaskHub.Infrastructure;
 using TaskHub.Infrastructure.Persistence;
 
@@ -54,6 +55,8 @@ namespace TaskHub.Api
             builder.Services.AddSignalR();
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
 
             builder.Services
                 .AddOptions<JwtOptions>()
