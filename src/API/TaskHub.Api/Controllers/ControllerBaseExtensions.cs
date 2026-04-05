@@ -20,6 +20,11 @@ internal static class ControllerBaseExtensions
         return result.Errors.Any(error => error.Contains("not found", StringComparison.OrdinalIgnoreCase));
     }
 
+    public static bool IsNotFoundError<T>(this Result<T> result)
+    {
+        return result.Errors.Any(error => error.Contains("not found", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static ObjectResult ToProblemDetailsResult(this ControllerBase controller, IReadOnlyCollection<string> errors, int statusCode, string title)
     {
         var problemDetails = new ProblemDetails

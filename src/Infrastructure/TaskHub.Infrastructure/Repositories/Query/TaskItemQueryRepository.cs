@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Application.Common.Pagination;
 using TaskHub.Application.Features.TaskItem.ReadModels;
@@ -8,7 +9,7 @@ using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Repositories.Query
 {
-    internal sealed class TaskItemQueryRepository(TaskHubDbContext db) : ITaskItemQueryRepository
+    internal sealed class TaskItemQueryRepository(TaskHubDbContext db, ICurrentUserAccessor currentUserAccessor) : ITaskItemQueryRepository
     {
         public async Task<TaskItemReadModel?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
@@ -80,6 +81,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
         public async Task<IReadOnlyCollection<TaskItemReadModel>> GetByTaskListIdAsync(Guid taskListId, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
+            var ownerIdentifier = currentUserAccessor.UserIdentifier ?? string.Empty;
             if (connection.State != ConnectionState.Open)
             {
                 await connection.OpenAsync(ct);
@@ -94,11 +96,16 @@ namespace TaskHub.Infrastructure.Repositories.Query
                                    ti.Priority,
                                    ti.Status
                                FROM task_items ti
+                               INNER JOIN task_lists tl ON tl.Id = ti.TaskListId
                                WHERE ti.TaskListId = @TaskListId
+                                 AND tl.OwnerIdentifier = @OwnerIdentifier
                                ORDER BY ti.Title;
                                """;
 
-            var command = new CommandDefinition(sql, new { TaskListId = taskListId }, cancellationToken: ct);
+            var command = new CommandDefinition(
+                sql,
+                new { TaskListId = taskListId, OwnerIdentifier = ownerIdentifier },
+                cancellationToken: ct);
             var items = await connection.QueryAsync<TaskItemReadModel>(command);
             return items.ToList();
         }

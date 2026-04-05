@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using TaskHub.Contracts.TaskItem;
+using TaskHub.Contracts.TaskList;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskItem.Queries;
 using TaskHub.Application.Features.TaskList.Commands;
@@ -283,17 +284,22 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for invalid transition"));
-        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
-            createListResult.Value.Id,
-            "Task with invalid transition",
-            "Description",
-            TaskPriority.Normal));
-
         using var client = await fixture.CreateAuthorizedClientAsync();
+        var createListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("List for invalid transition"));
+        createListResponse.EnsureSuccessStatusCode();
+
+        var createdList = await createListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(createdList);
+
+        var createItemResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(createdList!.Id, "Task with invalid transition", "Description", TaskPriority.Normal));
+        createItemResponse.EnsureSuccessStatusCode();
+
+        var createdTaskId = await createItemResponse.Content.ReadFromJsonAsync<Guid>();
 
         var response = await client.PostAsJsonAsync(
-            $"/api/TaskItem/{createItemResult.Value}/status",
+            $"/api/TaskItem/{createdTaskId}/status",
             new { Status = TaskStatus.Todo });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -339,28 +345,33 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for reopen"));
-        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
-            createListResult.Value.Id,
-            "Task for reopen",
-            "Description",
-            TaskPriority.Normal));
-
         using var client = await fixture.CreateAuthorizedClientAsync();
+        var createListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("List for reopen"));
+        createListResponse.EnsureSuccessStatusCode();
+
+        var createdList = await createListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(createdList);
+
+        var createItemResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(createdList!.Id, "Task for reopen", "Description", TaskPriority.Normal));
+        createItemResponse.EnsureSuccessStatusCode();
+
+        var createdTaskId = await createItemResponse.Content.ReadFromJsonAsync<Guid>();
 
         var moveToDoneResponse = await client.PostAsJsonAsync(
-            $"/api/TaskItem/{createItemResult.Value}/status",
+            $"/api/TaskItem/{createdTaskId}/status",
             new { Status = TaskStatus.Done });
 
         Assert.Equal(HttpStatusCode.OK, moveToDoneResponse.StatusCode);
 
         var reopenResponse = await client.PostAsJsonAsync(
-            $"/api/TaskItem/{createItemResult.Value}/status",
+            $"/api/TaskItem/{createdTaskId}/status",
             new { Status = TaskStatus.InProgress });
 
         Assert.Equal(HttpStatusCode.OK, reopenResponse.StatusCode);
 
-        var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createItemResult.Value}");
+        var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createdTaskId}");
 
         Assert.NotNull(getResponse);
         Assert.Equal(TaskStatus.InProgress, getResponse.Status);
@@ -371,22 +382,27 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List for endpoint status"));
-        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
-            createListResult.Value.Id,
-            "Task for status update",
-            "Description",
-            TaskPriority.Normal));
-
         using var client = await fixture.CreateAuthorizedClientAsync();
+        var createListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("List for endpoint status"));
+        createListResponse.EnsureSuccessStatusCode();
+
+        var createdList = await createListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(createdList);
+
+        var createItemResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(createdList!.Id, "Task for status update", "Description", TaskPriority.Normal));
+        createItemResponse.EnsureSuccessStatusCode();
+
+        var createdTaskId = await createItemResponse.Content.ReadFromJsonAsync<Guid>();
 
         var updateResponse = await client.PostAsJsonAsync(
-            $"/api/TaskItem/{createItemResult.Value}/status",
+            $"/api/TaskItem/{createdTaskId}/status",
             new { Status = TaskStatus.InProgress });
 
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
 
-        var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createItemResult.Value}");
+        var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createdTaskId}");
 
         Assert.NotNull(getResponse);
         Assert.Equal(TaskStatus.InProgress, getResponse.Status);
@@ -397,30 +413,130 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var selectedListResult = await fixture.SendAsync(new CreateTaskListCommand("Selected list"));
-        var otherListResult = await fixture.SendAsync(new CreateTaskListCommand("Other list"));
-
-        var selectedItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
-            selectedListResult.Value.Id,
-            "Selected task",
-            "Selected description",
-            TaskPriority.High));
-
-        await fixture.SendAsync(new CreateTaskItemCommand(
-            otherListResult.Value.Id,
-            "Other task",
-            "Other description",
-            TaskPriority.Low));
-
         using var client = await fixture.CreateAuthorizedClientAsync();
-        var boardItems = await client.GetFromJsonAsync<List<TaskCardResponse>>($"/api/TaskItem/board/{selectedListResult.Value.Id}");
+        var selectedListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("Selected list"));
+        var otherListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("Other list"));
+
+        selectedListResponse.EnsureSuccessStatusCode();
+        otherListResponse.EnsureSuccessStatusCode();
+
+        var selectedList = await selectedListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        var otherList = await otherListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+
+        Assert.NotNull(selectedList);
+        Assert.NotNull(otherList);
+
+        var selectedTaskResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(selectedList!.Id, "Selected task", "Selected description", TaskPriority.High));
+        var otherTaskResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(otherList!.Id, "Other task", "Other description", TaskPriority.Low));
+
+        selectedTaskResponse.EnsureSuccessStatusCode();
+        otherTaskResponse.EnsureSuccessStatusCode();
+
+        var selectedTaskId = await selectedTaskResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var boardItems = await client.GetFromJsonAsync<List<TaskCardResponse>>($"/api/TaskItem/board/{selectedList.Id}");
 
         Assert.NotNull(boardItems);
         Assert.Single(boardItems);
-        Assert.Equal(selectedItemResult.Value, boardItems[0].Id);
+        Assert.Equal(selectedTaskId, boardItems[0].Id);
         Assert.Equal("Selected task", boardItems[0].Title);
         Assert.Equal(TaskStatus.Todo, boardItems[0].Status);
         Assert.Equal([TaskStatus.InProgress, TaskStatus.Done, TaskStatus.Cancelled], boardItems[0].AllowedTargetStatuses);
+    }
+
+    [Fact]
+    public async Task Create_Endpoint_ForeignTaskList_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign task list"));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(createListResult.Value.Id, "Foreign task", "Description", TaskPriority.Normal));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Update_Endpoint_ForeignTaskItem_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign update list"));
+        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Foreign task",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.PutAsJsonAsync(
+            $"/api/TaskItem/{createItemResult.Value}",
+            new UpdateTaskItemRequest("Updated title", "Updated description", TaskPriority.High));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_Endpoint_ForeignTaskItem_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign delete list"));
+        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Foreign task",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.DeleteAsync($"/api/TaskItem/{createItemResult.Value}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_Endpoint_ForeignTaskItem_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign status list"));
+        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Foreign task",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.PostAsJsonAsync(
+            $"/api/TaskItem/{createItemResult.Value}/status",
+            new UpdateTaskStatusRequest(TaskStatus.Done));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTaskItemsBoard_Endpoint_ForeignTaskList_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign board list"));
+        await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Foreign board task",
+            "Description",
+            TaskPriority.Normal));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.GetAsync($"/api/TaskItem/board/{createListResult.Value.Id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
 }

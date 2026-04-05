@@ -1,9 +1,11 @@
 ﻿using System.Net.Http.Json;
 using FluentAssertions;
+using System.Net;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
 using TaskHub.Contracts.Common;
+using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
@@ -70,7 +72,11 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.NotNull(firstList);
         Assert.NotNull(secondList);
 
-        await fixture.SendAsync(new CreateTaskItemCommand(firstList!.Id, "Task A1", "Desc", TaskPriority.Normal));
+        var createTaskResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(firstList!.Id, "Task A1", "Desc", TaskPriority.Normal));
+
+        createTaskResponse.EnsureSuccessStatusCode();
 
         var response = await client.GetAsync("/api/TaskList?page=1&count=10");
 
@@ -186,6 +192,19 @@ public class TaskListTests(IntegrationTestFixture fixture)
     }
 
     [Fact]
+    public async Task Update_ForeignTaskList_Endpoint_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign title"));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.PutAsJsonAsync($"/api/TaskList/{createResult.Value.Id}", new UpdateTaskListRequest("Updated Title"));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Update_EmptyTaskListId_ShouldReturnFailure()
     {
         await fixture.ResetAsync();
@@ -203,6 +222,19 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var deleteResult = await fixture.SendAsync(new DeleteTaskListCommand(Guid.NewGuid()));
 
         Assert.True(deleteResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task Delete_ForeignTaskList_Endpoint_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign delete"));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.DeleteAsync($"/api/TaskList/{createResult.Value.Id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
