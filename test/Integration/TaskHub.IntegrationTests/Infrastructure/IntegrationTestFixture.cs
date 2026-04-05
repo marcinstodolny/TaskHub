@@ -1,8 +1,11 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using TaskHub.Api.Auth;
+using TaskHub.Api.Auth.Options;
 using TaskHub.Contracts.Auth;
 using TaskHub.Infrastructure.Persistence;
 using Xunit;
@@ -67,6 +70,19 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
 
         var client = ApiFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", payload!.AccessToken);
+        return client;
+    }
+
+    public async Task<HttpClient> CreateAuthorizedClientAsync(string userIdentifier, CancellationToken ct = default)
+    {
+        await using var scope = Services.CreateAsyncScope();
+        var tokenGenerator = scope.ServiceProvider.GetRequiredService<JwtTokenGenerator>();
+        var demoAuthOptions = scope.ServiceProvider.GetRequiredService<IOptions<DemoAuthOptions>>();
+
+        var token = tokenGenerator.Generate(userIdentifier, demoAuthOptions.Value.Role);
+
+        var client = ApiFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }
 }
