@@ -11,6 +11,7 @@ namespace TaskHub.Infrastructure.Persistence.Configurations
         {
             builder.ConfigureBase();
             builder.ToTable("task_lists");
+            builder.Property(x => x.OwnerIdentifier).HasMaxLength(256).IsRequired();
             builder.OwnsOne(x => x.Title, tb =>
             {
                 tb.Property(p => p.Value).HasColumnName("Title").HasMaxLength(TaskListTitle.MaxLength).IsRequired();

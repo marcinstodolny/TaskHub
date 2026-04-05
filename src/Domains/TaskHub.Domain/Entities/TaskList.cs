@@ -7,21 +7,22 @@ namespace TaskHub.Domain.Entities
 {
     public class TaskList : Entity<Guid>
     {
-
         private readonly List<TaskItem> _tasks = new();
         public IReadOnlyCollection<TaskItem> Tasks => _tasks.AsReadOnly();
         public TaskListTitle Title { get; private set; }
+        public string OwnerIdentifier { get; private set; } = string.Empty;
 
         private TaskList() { }
 
-        private TaskList(Guid id, TaskListTitle title) : base(id)
+        private TaskList(Guid id, TaskListTitle title, string ownerIdentifier) : base(id)
         {
             Title = title;
+            OwnerIdentifier = ownerIdentifier;
         }
 
-        public static Result<TaskList> Create(TaskListTitle title)
+        public static Result<TaskList> Create(TaskListTitle title, string ownerIdentifier)
         {
-            return Result.Success(new TaskList(Guid.NewGuid(), title));
+            return Result.Success(new TaskList(Guid.NewGuid(), title, ownerIdentifier));
         }
 
 

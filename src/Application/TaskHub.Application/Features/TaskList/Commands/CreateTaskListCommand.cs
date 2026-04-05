@@ -20,7 +20,7 @@ namespace TaskHub.Application.Features.TaskList.Commands
                 return Result.Fail<TaskListSummaryReadModel>(titleResult.Errors);
             }
 
-            var taskList = Domain.Entities.TaskList.Create(titleResult.Value);
+            var taskList = Domain.Entities.TaskList.Create(titleResult.Value, string.Empty);
             if (taskList.IsFailed)
             {
                 return Result.Fail<TaskListSummaryReadModel>(taskList.Errors);
