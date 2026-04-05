@@ -32,9 +32,9 @@ public class AuthTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        await fixture.SendAsync(new CreateTaskListCommand("Secured list"));
-
         using var client = await fixture.CreateAuthorizedClientAsync();
+        var createResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("Secured list"));
+        createResponse.EnsureSuccessStatusCode();
 
         var response = await client.GetAsync("/api/TaskList?page=1&count=10");
 
@@ -44,6 +44,19 @@ public class AuthTests(IntegrationTestFixture fixture)
 
         Assert.NotNull(payload);
         Assert.NotEmpty(payload!.Items);
+    }
+
+    [Fact]
+    public async Task GetTaskListById_ForForeignOwner_ShouldReturn404()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign list"));
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.GetAsync($"/api/TaskList/{createListResult.Value.Id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

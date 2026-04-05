@@ -56,12 +56,22 @@ public class TaskListTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var firstList = await fixture.SendAsync(new CreateTaskListCommand("API List A"));
-        var secondList = await fixture.SendAsync(new CreateTaskListCommand("API List B"));
-
-        await fixture.SendAsync(new CreateTaskItemCommand(firstList.Value.Id, "Task A1", "Desc", TaskPriority.Normal));
-
         using var client = await fixture.CreateAuthorizedClientAsync();
+
+        var firstCreateResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("API List A"));
+        var secondCreateResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("API List B"));
+
+        firstCreateResponse.EnsureSuccessStatusCode();
+        secondCreateResponse.EnsureSuccessStatusCode();
+
+        var firstList = await firstCreateResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        var secondList = await secondCreateResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+
+        Assert.NotNull(firstList);
+        Assert.NotNull(secondList);
+
+        await fixture.SendAsync(new CreateTaskItemCommand(firstList!.Id, "Task A1", "Desc", TaskPriority.Normal));
+
         var response = await client.GetAsync("/api/TaskList?page=1&count=10");
 
         response.EnsureSuccessStatusCode();
@@ -71,8 +81,8 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.NotNull(payload);
         Assert.NotNull(payload!.Items);
 
-        var firstListPayload = Assert.Single(payload.Items, item => item.Id == firstList.Value.Id);
-        var secondListPayload = Assert.Single(payload.Items, item => item.Id == secondList.Value.Id);
+        var firstListPayload = Assert.Single(payload.Items, item => item.Id == firstList.Id);
+        var secondListPayload = Assert.Single(payload.Items, item => item.Id == secondList.Id);
 
         Assert.True(firstListPayload.TasksCount >= 0);
         Assert.True(secondListPayload.TasksCount >= 0);
