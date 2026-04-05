@@ -10,7 +10,10 @@ namespace TaskHub.Application.Features.TaskList.Commands
 {
     public sealed record CreateTaskListCommand(string Title) : IRequest<Result<TaskListSummaryReadModel>>;
 
-    public sealed class CreateTaskListCommandHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository) : IRequestHandler<CreateTaskListCommand, Result<TaskListSummaryReadModel>>
+    public sealed class CreateTaskListCommandHandler(
+        IUnitOfWork unitOfWork,
+        ITaskListCommandRepository taskListCommandRepository,
+        ICurrentUserAccessor currentUserAccessor) : IRequestHandler<CreateTaskListCommand, Result<TaskListSummaryReadModel>>
     {
         public async Task<Result<TaskListSummaryReadModel>> Handle(CreateTaskListCommand request, CancellationToken ct)
         {
@@ -20,7 +23,8 @@ namespace TaskHub.Application.Features.TaskList.Commands
                 return Result.Fail<TaskListSummaryReadModel>(titleResult.Errors);
             }
 
-            var taskList = Domain.Entities.TaskList.Create(titleResult.Value, string.Empty);
+            var ownerIdentifier = currentUserAccessor.UserIdentifier ?? string.Empty;
+            var taskList = Domain.Entities.TaskList.Create(titleResult.Value, ownerIdentifier);
             if (taskList.IsFailed)
             {
                 return Result.Fail<TaskListSummaryReadModel>(taskList.Errors);
