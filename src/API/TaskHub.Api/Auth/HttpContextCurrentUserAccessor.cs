@@ -18,4 +18,15 @@ public sealed class HttpContextCurrentUserAccessor(IHttpContextAccessor httpCont
             return user.FindFirstValue(ClaimTypes.NameIdentifier);
         }
     }
+
+    public Guid? UserId
+    {
+        get
+        {
+            var userIdentifier = UserIdentifier;
+            return Guid.TryParse(userIdentifier, out var userId)
+                ? userId
+                : null;
+        }
+    }
 }

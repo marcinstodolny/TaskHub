@@ -6,7 +6,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using TaskHub.Api.Auth;
 using TaskHub.Api.Auth.Options;
+using TaskHub.Application.abstraction;
 using TaskHub.Contracts.Auth;
+using TaskHub.Domain.Entities;
 using TaskHub.Infrastructure.Persistence;
 using Xunit;
 
@@ -65,7 +67,8 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
         await using var scope = Services.CreateAsyncScope();
         var currentUserAccessor = scope.ServiceProvider.GetRequiredService<TestCurrentUserAccessor>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        using var _ = currentUserAccessor.BeginScope(userIdentifier);
+        var resolvedUserIdentifier = await ResolveOrCreateUserIdentifierAsync(scope.ServiceProvider, userIdentifier, ct);
+        using var _ = currentUserAccessor.BeginScope(resolvedUserIdentifier);
         return await sender.Send(request, ct);
     }
 
@@ -91,12 +94,67 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
     {
         await using var scope = Services.CreateAsyncScope();
         var tokenGenerator = scope.ServiceProvider.GetRequiredService<JwtTokenGenerator>();
-        var demoAuthOptions = scope.ServiceProvider.GetRequiredService<IOptions<DemoAuthOptions>>();
+        var user = await ResolveOrCreateUserAsync(scope.ServiceProvider, userIdentifier, ct);
 
-        var token = tokenGenerator.Generate(userIdentifier, userIdentifier, demoAuthOptions.Value.Role);
+        var token = tokenGenerator.Generate(user.Id, user.Username, user.Role);
 
         var client = ApiFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
+    }
+
+    private static async Task<string?> ResolveOrCreateUserIdentifierAsync(IServiceProvider serviceProvider, string? userIdentifier, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(userIdentifier))
+        {
+            return null;
+        }
+
+        var user = await ResolveOrCreateUserAsync(serviceProvider, userIdentifier, ct);
+        return user.Id.ToString();
+    }
+
+    private static async Task<User> ResolveOrCreateUserAsync(IServiceProvider serviceProvider, string userIdentifier, CancellationToken ct)
+    {
+        var dbContext = serviceProvider.GetRequiredService<TaskHubDbContext>();
+        var passwordHasher = serviceProvider.GetRequiredService<IUserPasswordHasher>();
+        var demoAuthOptions = serviceProvider.GetRequiredService<IOptions<DemoAuthOptions>>();
+
+        if (Guid.TryParse(userIdentifier, out var userId))
+        {
+            var existingUserById = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == userId, ct);
+            if (existingUserById is not null)
+            {
+                return existingUserById;
+            }
+
+            var createByIdResult = User.Create(
+                userId,
+                userIdentifier,
+                passwordHasher.HashPassword(TaskHubApiFactory.TestPassword),
+                userIdentifier,
+                demoAuthOptions.Value.Role);
+
+            await dbContext.Users.AddAsync(createByIdResult.Value, ct);
+            await dbContext.SaveChangesAsync(ct);
+            return createByIdResult.Value;
+        }
+
+        var existingUserByUsername = await dbContext.Users.SingleOrDefaultAsync(x => x.Username == userIdentifier, ct);
+        if (existingUserByUsername is not null)
+        {
+            return existingUserByUsername;
+        }
+
+        var createResult = User.Create(
+            Guid.NewGuid(),
+            userIdentifier,
+            passwordHasher.HashPassword(TaskHubApiFactory.TestPassword),
+            userIdentifier,
+            demoAuthOptions.Value.Role);
+
+        await dbContext.Users.AddAsync(createResult.Value, ct);
+        await dbContext.SaveChangesAsync(ct);
+        return createResult.Value;
     }
 }

@@ -28,6 +28,17 @@ public sealed class TestCurrentUserAccessor(IHttpContextAccessor httpContextAcce
         }
     }
 
+    public Guid? UserId
+    {
+        get
+        {
+            var userIdentifier = UserIdentifier;
+            return Guid.TryParse(userIdentifier, out var userId)
+                ? userId
+                : null;
+        }
+    }
+
     public IDisposable BeginScope(string? userIdentifier)
     {
         var previousValue = _overrideUserIdentifier.Value;

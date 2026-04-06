@@ -21,9 +21,9 @@ namespace TaskHub.Infrastructure.Repositories.Command
 
         public async Task<Result<TaskList>> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            var ownerIdentifier = currentUserAccessor.UserIdentifier ?? string.Empty;
+            var userId = currentUserAccessor.UserId ?? Guid.Empty;
             var task = await db.TaskLists.FirstOrDefaultAsync(
-                t => t.Id == id && t.OwnerIdentifier == ownerIdentifier,
+                t => t.Id == id && t.UserId == userId,
                 ct);
             return task is null ? Result.Fail<TaskList>($"Task list with id {id} not found") : Result.Success(task);
         }

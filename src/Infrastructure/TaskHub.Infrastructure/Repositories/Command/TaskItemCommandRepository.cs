@@ -21,10 +21,10 @@ namespace TaskHub.Infrastructure.Repositories.Command
 
         public async Task<Result<TaskItem>> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
-            var ownerIdentifier = currentUserAccessor.UserIdentifier ?? string.Empty;
+            var userId = currentUserAccessor.UserId ?? Guid.Empty;
             var task = await db.TaskItems
                 .Join(
-                    db.TaskLists.Where(list => list.OwnerIdentifier == ownerIdentifier),
+                    db.TaskLists.Where(list => list.UserId == userId),
                     item => item.TaskListId,
                     list => list.Id,
                     (item, _) => item)

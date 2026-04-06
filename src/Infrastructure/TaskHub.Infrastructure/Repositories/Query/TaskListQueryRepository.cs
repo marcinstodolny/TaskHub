@@ -15,12 +15,12 @@ namespace TaskHub.Infrastructure.Repositories.Query
             CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
-            var ownerIdentifier = currentUserAccessor.UserIdentifier ?? string.Empty;
+            var userId = currentUserAccessor.UserId ?? Guid.Empty;
 
             const string sql = """
                                SELECT COUNT(*)
                                FROM task_lists
-                               WHERE OwnerIdentifier = @OwnerIdentifier;
+                               WHERE UserId = @UserId;
 
                                SELECT
                                    tl.Id,
@@ -28,14 +28,14 @@ namespace TaskHub.Infrastructure.Repositories.Query
                                    COUNT(ti.Id) AS TasksCount
                                FROM task_lists tl
                                LEFT JOIN task_items ti ON ti.TaskListId = tl.Id
-                               WHERE tl.OwnerIdentifier = @OwnerIdentifier
+                               WHERE tl.UserId = @UserId
                                GROUP BY tl.Id, tl.Title
                                ORDER BY tl.Title
                                OFFSET @skip ROWS
                                FETCH NEXT @take ROWS ONLY;
                                """;
 
-            var command = new CommandDefinition(sql, new { OwnerIdentifier = ownerIdentifier, skip = (page - 1) * count, take = count },
+            var command = new CommandDefinition(sql, new { UserId = userId, skip = (page - 1) * count, take = count },
                 cancellationToken: ct);
             await using var gridReader = await connection.QueryMultipleAsync(command);
 
@@ -52,7 +52,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
         public async Task<TaskListDetailsReadModel?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
-            var ownerIdentifier = currentUserAccessor.UserIdentifier ?? string.Empty;
+            var userId = currentUserAccessor.UserId ?? Guid.Empty;
 
             const string sql = """
                                SELECT TOP (1)
@@ -61,7 +61,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
                                    COUNT(ti.Id) AS TasksCount
                                FROM task_lists tl
                                LEFT JOIN task_items ti ON ti.TaskListId = tl.Id
-                               WHERE tl.Id = @Id AND tl.OwnerIdentifier = @OwnerIdentifier
+                               WHERE tl.Id = @Id AND tl.UserId = @UserId
                                GROUP BY tl.Id, tl.Title
                                ORDER BY tl.Id;
 
@@ -75,14 +75,14 @@ namespace TaskHub.Infrastructure.Repositories.Query
                                FROM task_items ti
                                WHERE ti.TaskListId = (
                                    SELECT TOP (1) tl.Id
-                                   FROM task_lists tl
-                                   WHERE tl.Id = @Id AND tl.OwnerIdentifier = @OwnerIdentifier
+                               FROM task_lists tl
+                                   WHERE tl.Id = @Id AND tl.UserId = @UserId
                                    ORDER BY tl.Id
                                )
                                ORDER BY ti.Id;
                                """;
 
-            var command = new CommandDefinition(sql, new { Id = id, OwnerIdentifier = ownerIdentifier }, cancellationToken: ct);
+            var command = new CommandDefinition(sql, new { Id = id, UserId = userId }, cancellationToken: ct);
 
             await using var gridReader = await connection.QueryMultipleAsync(command);
 
