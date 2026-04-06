@@ -13,16 +13,21 @@ namespace TaskHub.IntegrationTests;
 [Collection(nameof(IntegrationTestCollection))]
 public class OwnershipIsolationTests(IntegrationTestFixture fixture)
 {
-    private const string UserA = "integration-user-a";
-    private const string UserB = "integration-user-b";
+    private static readonly Guid UserAId = new("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid UserBId = new("22222222-2222-2222-2222-222222222222");
+    private const string UserAUsername = "integration-user-a";
+    private const string UserBUsername = "integration-user-b";
 
     [Fact]
     public async Task TaskLists_AreVisibleOnlyToTheirOwners()
     {
         await fixture.ResetAsync();
 
-        using var userAClient = await fixture.CreateAuthorizedClientAsync(UserA);
-        using var userBClient = await fixture.CreateAuthorizedClientAsync(UserB);
+        var userA = await fixture.EnsureUserAsync(UserAId, UserAUsername);
+        var userB = await fixture.EnsureUserAsync(UserBId, UserBUsername);
+
+        using var userAClient = await fixture.CreateAuthorizedClientAsync(userA);
+        using var userBClient = await fixture.CreateAuthorizedClientAsync(userB);
 
         var userAList = await CreateTaskListAsync(userAClient, "User A List");
         var userBList = await CreateTaskListAsync(userBClient, "User B List");
@@ -48,8 +53,11 @@ public class OwnershipIsolationTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        using var userAClient = await fixture.CreateAuthorizedClientAsync(UserA);
-        using var userBClient = await fixture.CreateAuthorizedClientAsync(UserB);
+        var userA = await fixture.EnsureUserAsync(UserAId, UserAUsername);
+        var userB = await fixture.EnsureUserAsync(UserBId, UserBUsername);
+
+        using var userAClient = await fixture.CreateAuthorizedClientAsync(userA);
+        using var userBClient = await fixture.CreateAuthorizedClientAsync(userB);
 
         var userBList = await CreateTaskListAsync(userBClient, "User B List");
 
@@ -69,8 +77,11 @@ public class OwnershipIsolationTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        using var userAClient = await fixture.CreateAuthorizedClientAsync(UserA);
-        using var userBClient = await fixture.CreateAuthorizedClientAsync(UserB);
+        var userA = await fixture.EnsureUserAsync(UserAId, UserAUsername);
+        var userB = await fixture.EnsureUserAsync(UserBId, UserBUsername);
+
+        using var userAClient = await fixture.CreateAuthorizedClientAsync(userA);
+        using var userBClient = await fixture.CreateAuthorizedClientAsync(userB);
 
         var userBList = await CreateTaskListAsync(userBClient, "User B List");
         var userBTaskId = await CreateTaskItemAsync(userBClient, userBList.Id, "User B Task");
@@ -99,8 +110,11 @@ public class OwnershipIsolationTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        using var userAClient = await fixture.CreateAuthorizedClientAsync(UserA);
-        using var userBClient = await fixture.CreateAuthorizedClientAsync(UserB);
+        var userA = await fixture.EnsureUserAsync(UserAId, UserAUsername);
+        var userB = await fixture.EnsureUserAsync(UserBId, UserBUsername);
+
+        using var userAClient = await fixture.CreateAuthorizedClientAsync(userA);
+        using var userBClient = await fixture.CreateAuthorizedClientAsync(userB);
 
         var userAList = await CreateTaskListAsync(userAClient, "User A List");
         var userBList = await CreateTaskListAsync(userBClient, "User B List");
@@ -120,8 +134,11 @@ public class OwnershipIsolationTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        using var userAClient = await fixture.CreateAuthorizedClientAsync(UserA);
-        using var userBClient = await fixture.CreateAuthorizedClientAsync(UserB);
+        var userA = await fixture.EnsureUserAsync(UserAId, UserAUsername);
+        var userB = await fixture.EnsureUserAsync(UserBId, UserBUsername);
+
+        using var userAClient = await fixture.CreateAuthorizedClientAsync(userA);
+        using var userBClient = await fixture.CreateAuthorizedClientAsync(userB);
 
         var userAList = await CreateTaskListAsync(userAClient, "User A List");
         var userBList = await CreateTaskListAsync(userBClient, "User B List");
