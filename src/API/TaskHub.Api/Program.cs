@@ -148,7 +148,7 @@ namespace TaskHub.Api
 
                         if (dbContext.Database.GetAppliedMigrations().Contains(AddUsersTableMigrationId, StringComparer.OrdinalIgnoreCase))
                         {
-                            demoUserInitializer.EnsureDefaultUserAsync().GetAwaiter().GetResult();
+                            demoUserInitializer.EnsureDemoUserAsync().GetAwaiter().GetResult();
                         }
 
                         dbContext.Database.Migrate();

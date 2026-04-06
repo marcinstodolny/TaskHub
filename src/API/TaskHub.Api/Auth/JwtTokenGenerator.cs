@@ -13,16 +13,12 @@ public sealed class JwtTokenGenerator(IOptions<JwtOptions> options)
 
     public string Generate(Guid userId, string username, string role)
     {
-        return Generate(userId.ToString(), username, role);
-    }
-
-    public string Generate(string userId, string username, string role)
-    {
         var now = DateTime.UtcNow;
+        var userIdValue = userId.ToString();
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId),
-            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(JwtRegisteredClaimNames.Sub, userIdValue),
+            new Claim(ClaimTypes.NameIdentifier, userIdValue),
             new Claim(ClaimTypes.Name, username),
             new Claim(ClaimTypes.Role, role),
         };

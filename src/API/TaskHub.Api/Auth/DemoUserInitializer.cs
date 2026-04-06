@@ -13,7 +13,7 @@ public sealed class DemoUserInitializer(
     IUserPasswordHasher passwordHasher,
     ILogger<DemoUserInitializer> logger)
 {
-    public async Task EnsureDefaultUserAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureDemoUserAsync(CancellationToken cancellationToken = default)
     {
         var options = demoAuthOptions.Value;
         if (!options.Enabled)
@@ -42,7 +42,7 @@ public sealed class DemoUserInitializer(
 
             await dbContext.Users.AddAsync(createResult.Value, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Seeded default demo user '{Username}' with id '{UserId}'.", options.Username, options.UserId);
+            logger.LogInformation("Seeded demo user '{Username}' with id '{UserId}'.", options.Username, options.UserId);
             return;
         }
 

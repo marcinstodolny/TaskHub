@@ -12,8 +12,8 @@ using TaskHub.Infrastructure.Persistence;
 namespace TaskHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TaskHubDbContext))]
-    [Migration("20260405002326_AddTaskListOwnerIdentifier")]
-    partial class AddTaskListOwnerIdentifier
+    [Migration("20260406165339_AddTaskListUserOwnership")]
+    partial class AddTaskListUserOwnership
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -64,17 +64,57 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("OwnerIdentifier")
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("task_lists", (string)null);
+                });
+
+            modelBuilder.Entity("TaskHub.Domain.Entities.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
                         .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.HasKey("Id");
 
-                    b.ToTable("task_lists", (string)null);
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("users", (string)null);
                 });
 
             modelBuilder.Entity("TaskHub.Domain.Entities.TaskItem", b =>
@@ -131,6 +171,12 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("TaskHub.Domain.Entities.TaskList", b =>
                 {
+                    b.HasOne("TaskHub.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.OwnsOne("TaskHub.Domain.ValueObjects.TaskListTitle", "Title", b1 =>
                         {
                             b1.Property<Guid>("TaskListId")

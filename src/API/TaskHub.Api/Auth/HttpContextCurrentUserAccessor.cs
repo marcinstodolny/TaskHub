@@ -5,7 +5,7 @@ namespace TaskHub.Api.Auth;
 
 public sealed class HttpContextCurrentUserAccessor(IHttpContextAccessor httpContextAccessor) : ICurrentUserAccessor
 {
-    public string? UserIdentifier
+    public Guid? UserId
     {
         get
         {
@@ -15,16 +15,8 @@ public sealed class HttpContextCurrentUserAccessor(IHttpContextAccessor httpCont
                 return null;
             }
 
-            return user.FindFirstValue(ClaimTypes.NameIdentifier);
-        }
-    }
-
-    public Guid? UserId
-    {
-        get
-        {
-            var userIdentifier = UserIdentifier;
-            return Guid.TryParse(userIdentifier, out var userId)
+            var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(userIdClaim, out var userId)
                 ? userId
                 : null;
         }

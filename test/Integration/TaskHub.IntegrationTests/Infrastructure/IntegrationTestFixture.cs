@@ -54,7 +54,7 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
 
         await using var scope = Services.CreateAsyncScope();
         var demoUserInitializer = scope.ServiceProvider.GetRequiredService<DemoUserInitializer>();
-        await demoUserInitializer.EnsureDefaultUserAsync();
+        await demoUserInitializer.EnsureDemoUserAsync();
     }
 
     public Task<TResult> SendAsync<TResult>(IRequest<TResult> request, CancellationToken ct = default)
@@ -62,18 +62,23 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
         return SendAsUserAsync(request, TaskHubApiFactory.TestUsername, ct);
     }
 
-    public Task<TResult> SendAsUserAsync<TResult>(IRequest<TResult> request, Guid userId, CancellationToken ct = default)
-    {
-        return SendAsUserAsync(request, userId.ToString(), ct);
-    }
-
-    public async Task<TResult> SendAsUserAsync<TResult>(IRequest<TResult> request, string? userIdentifier, CancellationToken ct = default)
+    public async Task<TResult> SendAsUserAsync<TResult>(IRequest<TResult> request, Guid userId, CancellationToken ct = default)
     {
         await using var scope = Services.CreateAsyncScope();
         var currentUserAccessor = scope.ServiceProvider.GetRequiredService<TestCurrentUserAccessor>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var resolvedUserIdentifier = await ResolveOrCreateUserIdentifierAsync(scope.ServiceProvider, userIdentifier, ct);
-        using var _ = currentUserAccessor.BeginScope(resolvedUserIdentifier);
+        var resolvedUserId = await ResolveOrCreateUserIdAsync(scope.ServiceProvider, userId, ct);
+        using var _ = currentUserAccessor.BeginScope(resolvedUserId);
+        return await sender.Send(request, ct);
+    }
+
+    public async Task<TResult> SendAsUserAsync<TResult>(IRequest<TResult> request, string? username, CancellationToken ct = default)
+    {
+        await using var scope = Services.CreateAsyncScope();
+        var currentUserAccessor = scope.ServiceProvider.GetRequiredService<TestCurrentUserAccessor>();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var resolvedUserId = await ResolveOrCreateUserIdAsync(scope.ServiceProvider, username, ct);
+        using var _ = currentUserAccessor.BeginScope(resolvedUserId);
         return await sender.Send(request, ct);
     }
 
@@ -113,15 +118,21 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
         return await ResolveOrCreateUserAsync(scope.ServiceProvider, userId, username, ct);
     }
 
-    private static async Task<string?> ResolveOrCreateUserIdentifierAsync(IServiceProvider serviceProvider, string? userIdentifier, CancellationToken ct)
+    private static async Task<Guid?> ResolveOrCreateUserIdAsync(IServiceProvider serviceProvider, string? username, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(userIdentifier))
+        if (string.IsNullOrWhiteSpace(username))
         {
             return null;
         }
 
-        var user = await ResolveOrCreateUserAsync(serviceProvider, userIdentifier, ct);
-        return user.Id.ToString();
+        var user = await ResolveOrCreateUserAsync(serviceProvider, username, ct);
+        return user.Id;
+    }
+
+    private static async Task<Guid> ResolveOrCreateUserIdAsync(IServiceProvider serviceProvider, Guid userId, CancellationToken ct)
+    {
+        var user = await ResolveOrCreateUserAsync(serviceProvider, userId, userId.ToString(), ct);
+        return user.Id;
     }
 
     private static async Task<User> ResolveOrCreateUserAsync(IServiceProvider serviceProvider, string userIdentifier, CancellationToken ct)

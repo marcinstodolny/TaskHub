@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TaskHub.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class ReplaceTaskListOwnerIdentifierWithUserId : Migration
+    public partial class AddTaskListUserOwnership : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,21 +19,23 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
 
             migrationBuilder.Sql(
                 """
-                UPDATE tl
-                SET tl.UserId = u.Id
-                FROM task_lists tl
-                INNER JOIN users u ON u.Id = TRY_CONVERT(uniqueidentifier, tl.OwnerIdentifier)
-                WHERE tl.UserId IS NULL;
-
-                UPDATE tl
-                SET tl.UserId = u.Id
-                FROM task_lists tl
-                INNER JOIN users u ON u.Username = tl.OwnerIdentifier
-                WHERE tl.UserId IS NULL;
-
-                IF EXISTS (SELECT 1 FROM task_lists WHERE UserId IS NULL)
+                IF EXISTS (SELECT 1 FROM task_lists)
                 BEGIN
-                    THROW 51000, 'Cannot automatically migrate task_lists ownership to UserId. Ensure matching users exist for every OwnerIdentifier value, then re-run the migration.', 1;
+                    IF NOT EXISTS (SELECT 1 FROM users)
+                    BEGIN
+                        THROW 51000, 'Cannot migrate task_lists to UserId ownership because no users exist. Seed or backfill users first, then re-run the migration.', 1;
+                    END
+
+                    IF (SELECT COUNT(*) FROM users) > 1
+                    BEGIN
+                        THROW 51000, 'Cannot automatically migrate task_lists to UserId ownership when multiple users exist. Manually backfill task_lists.UserId before re-running the migration.', 1;
+                    END
+
+                    UPDATE tl
+                    SET tl.UserId = u.Id
+                    FROM task_lists tl
+                    CROSS JOIN users u
+                    WHERE tl.UserId IS NULL;
                 END
                 """);
 
@@ -58,10 +60,6 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                 principalTable: "users",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
-
-            migrationBuilder.DropColumn(
-                name: "OwnerIdentifier",
-                table: "task_lists");
         }
 
         /// <inheritdoc />
@@ -74,33 +72,6 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
             migrationBuilder.DropIndex(
                 name: "IX_task_lists_UserId",
                 table: "task_lists");
-
-            migrationBuilder.AddColumn<string>(
-                name: "OwnerIdentifier",
-                table: "task_lists",
-                type: "nvarchar(256)",
-                maxLength: 256,
-                nullable: true);
-
-            migrationBuilder.Sql(
-                """
-                UPDATE tl
-                SET tl.OwnerIdentifier = u.Username
-                FROM task_lists tl
-                INNER JOIN users u ON u.Id = tl.UserId
-                WHERE tl.OwnerIdentifier IS NULL;
-                """);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "OwnerIdentifier",
-                table: "task_lists",
-                type: "nvarchar(256)",
-                maxLength: 256,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(256)",
-                oldMaxLength: 256,
-                oldNullable: true);
 
             migrationBuilder.DropColumn(
                 name: "UserId",

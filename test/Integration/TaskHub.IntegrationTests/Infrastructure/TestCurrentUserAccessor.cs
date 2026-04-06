@@ -7,15 +7,15 @@ namespace TaskHub.IntegrationTests.Infrastructure;
 
 public sealed class TestCurrentUserAccessor(IHttpContextAccessor httpContextAccessor) : ICurrentUserAccessor
 {
-    private readonly AsyncLocal<string?> _overrideUserIdentifier = new();
+    private readonly AsyncLocal<Guid?> _overrideUserId = new();
 
-    public string? UserIdentifier
+    public Guid? UserId
     {
         get
         {
-            if (_overrideUserIdentifier.Value is not null)
+            if (_overrideUserId.Value is not null)
             {
-                return _overrideUserIdentifier.Value;
+                return _overrideUserId.Value;
             }
 
             var user = httpContextAccessor.HttpContext?.User;
@@ -24,26 +24,18 @@ public sealed class TestCurrentUserAccessor(IHttpContextAccessor httpContextAcce
                 return null;
             }
 
-            return user.FindFirstValue(ClaimTypes.NameIdentifier);
-        }
-    }
-
-    public Guid? UserId
-    {
-        get
-        {
-            var userIdentifier = UserIdentifier;
-            return Guid.TryParse(userIdentifier, out var userId)
+            var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(userIdClaim, out var userId)
                 ? userId
                 : null;
         }
     }
 
-    public IDisposable BeginScope(string? userIdentifier)
+    public IDisposable BeginScope(Guid? userId)
     {
-        var previousValue = _overrideUserIdentifier.Value;
-        _overrideUserIdentifier.Value = userIdentifier;
-        return new RestoreScope(() => _overrideUserIdentifier.Value = previousValue);
+        var previousValue = _overrideUserId.Value;
+        _overrideUserId.Value = userId;
+        return new RestoreScope(() => _overrideUserId.Value = previousValue);
     }
 
     private sealed class RestoreScope(Action restore) : IDisposable
