@@ -1,9 +1,11 @@
 ﻿using System.Net.Http.Json;
 using FluentAssertions;
+using System.Net;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
 using TaskHub.Contracts.Common;
+using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
@@ -50,18 +52,71 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.Contains(getAllResult.Value.Items, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
     }
 
+    [Fact]
+    public async Task GetById_WithExistingTasks_ShouldReturnChildTaskData()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List with tasks"));
+
+        var firstTaskResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "First child task",
+            "First child description",
+            TaskPriority.High));
+        var secondTaskResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Second child task",
+            "Second child description",
+            TaskPriority.Normal));
+
+        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(createListResult.Value.Id));
+
+        Assert.True(firstTaskResult.IsSuccess);
+        Assert.True(secondTaskResult.IsSuccess);
+        Assert.True(getResult.IsSuccess);
+        Assert.NotEmpty(getResult.Value.Tasks);
+        Assert.Equal(2, getResult.Value.Tasks.Count);
+        Assert.Contains(getResult.Value.Tasks, task =>
+            task.Id == firstTaskResult.Value &&
+            task.TaskListId == createListResult.Value.Id &&
+            task.Title == "First child task" &&
+            task.Description == "First child description" &&
+            task.Priority == TaskPriority.High);
+        Assert.Contains(getResult.Value.Tasks, task =>
+            task.Id == secondTaskResult.Value &&
+            task.TaskListId == createListResult.Value.Id &&
+            task.Title == "Second child task" &&
+            task.Description == "Second child description" &&
+            task.Priority == TaskPriority.Normal);
+    }
+
 
     [Fact]
     public async Task GetAll_Api_ShouldIncludeTasksCount()
     {
         await fixture.ResetAsync();
 
-        var firstList = await fixture.SendAsync(new CreateTaskListCommand("API List A"));
-        var secondList = await fixture.SendAsync(new CreateTaskListCommand("API List B"));
-
-        await fixture.SendAsync(new CreateTaskItemCommand(firstList.Value.Id, "Task A1", "Desc", TaskPriority.Normal));
-
         using var client = await fixture.CreateAuthorizedClientAsync();
+
+        var firstCreateResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("API List A"));
+        var secondCreateResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("API List B"));
+
+        firstCreateResponse.EnsureSuccessStatusCode();
+        secondCreateResponse.EnsureSuccessStatusCode();
+
+        var firstList = await firstCreateResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        var secondList = await secondCreateResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+
+        Assert.NotNull(firstList);
+        Assert.NotNull(secondList);
+
+        var createTaskResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(firstList!.Id, "Task A1", "Desc", TaskPriority.Normal));
+
+        createTaskResponse.EnsureSuccessStatusCode();
+
         var response = await client.GetAsync("/api/TaskList?page=1&count=10");
 
         response.EnsureSuccessStatusCode();
@@ -71,8 +126,8 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.NotNull(payload);
         Assert.NotNull(payload!.Items);
 
-        var firstListPayload = Assert.Single(payload.Items, item => item.Id == firstList.Value.Id);
-        var secondListPayload = Assert.Single(payload.Items, item => item.Id == secondList.Value.Id);
+        var firstListPayload = Assert.Single(payload.Items, item => item.Id == firstList.Id);
+        var secondListPayload = Assert.Single(payload.Items, item => item.Id == secondList.Id);
 
         Assert.True(firstListPayload.TasksCount >= 0);
         Assert.True(secondListPayload.TasksCount >= 0);
@@ -93,6 +148,17 @@ public class TaskListTests(IntegrationTestFixture fixture)
 
         Assert.True(getAllResult.IsSuccess);
         Assert.Empty(getAllResult.Value.Items);
+    }
+
+    [Fact]
+    public async Task Create_WithoutCurrentUser_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Unauthenticated list"), null);
+
+        Assert.True(createListResult.IsFailed);
+        Assert.Contains(createListResult.Errors, error => error.Contains("Current authenticated user id", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -176,6 +242,19 @@ public class TaskListTests(IntegrationTestFixture fixture)
     }
 
     [Fact]
+    public async Task Update_ForeignTaskList_Endpoint_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign title"), "foreign-user");
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.PutAsJsonAsync($"/api/TaskList/{createResult.Value.Id}", new UpdateTaskListRequest("Updated Title"));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Update_EmptyTaskListId_ShouldReturnFailure()
     {
         await fixture.ResetAsync();
@@ -193,6 +272,19 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var deleteResult = await fixture.SendAsync(new DeleteTaskListCommand(Guid.NewGuid()));
 
         Assert.True(deleteResult.IsFailed);
+    }
+
+    [Fact]
+    public async Task Delete_ForeignTaskList_Endpoint_ShouldReturnNotFound()
+    {
+        await fixture.ResetAsync();
+
+        var createResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign delete"), "foreign-user");
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var response = await client.DeleteAsync($"/api/TaskList/{createResult.Value.Id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

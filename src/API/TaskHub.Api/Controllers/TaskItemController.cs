@@ -37,8 +37,9 @@ namespace TaskHub.Api.Controllers
         public async Task<ActionResult<IReadOnlyCollection<TaskCardResponse>>> GetTaskItemsBoard(Guid taskListId, CancellationToken ct)
         {
             var result = await mediator.Send(new GetTaskItemsBoardQuery(taskListId), ct);
+            var statusCode = result.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
             return result.IsFailed
-                ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to load task board")
+                ? this.ToProblem(result, statusCode, "Unable to load task board")
                 : Ok(result.Value.Select(item => item.ToContract()));
         }
 
@@ -46,9 +47,10 @@ namespace TaskHub.Api.Controllers
         public async Task<ActionResult<Guid>> CreateTaskItem([FromBody] CreateTaskItemRequest request, CancellationToken ct)
         {
             var task = await mediator.Send(new CreateTaskItemCommand(request.TaskListId, request.Title, request.Description, request.Priority), ct);
+            var statusCode = task.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
 
             return task.IsFailed
-                ? this.ToProblem(task, StatusCodes.Status400BadRequest, "Unable to create task item")
+                ? this.ToProblem(task, statusCode, "Unable to create task item")
                 : Ok(task.Value);
         }
 
@@ -70,8 +72,9 @@ namespace TaskHub.Api.Controllers
         public async Task<ActionResult<TaskCardResponse>> UpdateTaskItem(Guid taskItemId, [FromBody] UpdateTaskItemRequest request, CancellationToken ct)
         {
             var result = await mediator.Send(new UpdateTaskItemCommand(taskItemId, request.Title, request.Description, request.Priority), ct);
+            var statusCode = result.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
             return result.IsFailed
-                ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to update task item")
+                ? this.ToProblem(result, statusCode, "Unable to update task item")
                 : Ok(result.Value.ToContract());
         }
 
@@ -79,8 +82,9 @@ namespace TaskHub.Api.Controllers
         public async Task<IActionResult> DeleteTaskItem(Guid taskItemId, CancellationToken ct)
         {
             var result = await mediator.Send(new DeleteTaskItemCommand(taskItemId), ct);
+            var statusCode = result.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
             return result.IsFailed
-                ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to delete task item")
+                ? this.ToProblem(result, statusCode, "Unable to delete task item")
                 : Ok();
         }
     }

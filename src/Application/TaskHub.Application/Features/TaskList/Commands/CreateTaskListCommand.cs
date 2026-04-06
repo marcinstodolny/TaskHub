@@ -10,7 +10,10 @@ namespace TaskHub.Application.Features.TaskList.Commands
 {
     public sealed record CreateTaskListCommand(string Title) : IRequest<Result<TaskListSummaryReadModel>>;
 
-    public sealed class CreateTaskListCommandHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository) : IRequestHandler<CreateTaskListCommand, Result<TaskListSummaryReadModel>>
+    public sealed class CreateTaskListCommandHandler(
+        IUnitOfWork unitOfWork,
+        ITaskListCommandRepository taskListCommandRepository,
+        ICurrentUserAccessor currentUserAccessor) : IRequestHandler<CreateTaskListCommand, Result<TaskListSummaryReadModel>>
     {
         public async Task<Result<TaskListSummaryReadModel>> Handle(CreateTaskListCommand request, CancellationToken ct)
         {
@@ -20,7 +23,13 @@ namespace TaskHub.Application.Features.TaskList.Commands
                 return Result.Fail<TaskListSummaryReadModel>(titleResult.Errors);
             }
 
-            var taskList = Domain.Entities.TaskList.Create(titleResult.Value);
+            var userId = currentUserAccessor.UserId;
+            if (userId is null || userId == Guid.Empty)
+            {
+                return Result.Fail<TaskListSummaryReadModel>("Current authenticated user id is required to create a task list.");
+            }
+
+            var taskList = Domain.Entities.TaskList.Create(titleResult.Value, userId.Value);
             if (taskList.IsFailed)
             {
                 return Result.Fail<TaskListSummaryReadModel>(taskList.Errors);

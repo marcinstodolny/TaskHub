@@ -11,10 +11,17 @@ namespace TaskHub.Infrastructure.Persistence.Configurations
         {
             builder.ConfigureBase();
             builder.ToTable("task_lists");
+            builder.Property(x => x.UserId).IsRequired();
             builder.OwnsOne(x => x.Title, tb =>
             {
                 tb.Property(p => p.Value).HasColumnName("Title").HasMaxLength(TaskListTitle.MaxLength).IsRequired();
             });
+
+            builder
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder
                 .HasMany(t => t.Tasks)

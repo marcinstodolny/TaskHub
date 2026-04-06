@@ -38,7 +38,7 @@ internal static class ContractMappings
     {
         Id = source.Id,
         Title = source.Title,
-        TasksCount = source.Tasks.Count
+        TasksCount = source.TasksCount
     };
 
     public static PaginatedResponse<TTarget> Map<TSource, TTarget>(this Application.Common.Pagination.PagedResult<TSource> source, Func<TSource, TTarget> map)

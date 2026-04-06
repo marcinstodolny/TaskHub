@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using TaskHub.Application.abstraction;
 using TaskHub.Api;
 using TaskHub.Infrastructure.Persistence;
 
@@ -37,9 +38,12 @@ public class TaskHubApiFactory(TaskHubMsSqlFixture database) : WebApplicationFac
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<TaskHubDbContext>>();
+            services.RemoveAll<ICurrentUserAccessor>();
 
             services.AddDbContext<TaskHubDbContext>(options =>
                 options.UseSqlServer(database.ConnectionString));
+            services.AddSingleton<TestCurrentUserAccessor>();
+            services.AddScoped<ICurrentUserAccessor>(provider => provider.GetRequiredService<TestCurrentUserAccessor>());
         });
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TaskHub.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using TaskHub.Infrastructure.Persistence;
 namespace TaskHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TaskHubDbContext))]
-    partial class TaskHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260406163148_AddUsersTable")]
+    partial class AddUsersTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,12 +67,7 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("task_lists", (string)null);
                 });
@@ -168,12 +166,6 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("TaskHub.Domain.Entities.TaskList", b =>
                 {
-                    b.HasOne("TaskHub.Domain.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.OwnsOne("TaskHub.Domain.ValueObjects.TaskListTitle", "Title", b1 =>
                         {
                             b1.Property<Guid>("TaskListId")

@@ -47,8 +47,9 @@ namespace TaskHub.Api.Controllers
         public async Task<ActionResult<TaskListLightResponse>> UpdateTaskList(Guid taskListId, [FromBody] UpdateTaskListRequest request, CancellationToken ct)
         {
             var result = await mediator.Send(new UpdateTaskListCommand(taskListId, request.Title), ct);
+            var statusCode = result.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
             return result.IsFailed
-                ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to update task list")
+                ? this.ToProblem(result, statusCode, "Unable to update task list")
                 : Ok(result.Value.ToContract());
         }
 
@@ -56,8 +57,9 @@ namespace TaskHub.Api.Controllers
         public async Task<IActionResult> DeleteTaskList(Guid taskListId, CancellationToken ct)
         {
             var result = await mediator.Send(new DeleteTaskListCommand(taskListId), ct);
+            var statusCode = result.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
             return result.IsFailed
-                ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to delete task list")
+                ? this.ToProblem(result, statusCode, "Unable to delete task list")
                 : Ok();
         }
     }

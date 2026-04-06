@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Query;
 using TaskHub.Application.Common.Pagination;
 using TaskHub.Application.Features.TaskItem.ReadModels;
@@ -8,11 +9,12 @@ using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Repositories.Query
 {
-    internal sealed class TaskItemQueryRepository(TaskHubDbContext db) : ITaskItemQueryRepository
+    internal sealed class TaskItemQueryRepository(TaskHubDbContext db, ICurrentUserAccessor currentUserAccessor) : ITaskItemQueryRepository
     {
         public async Task<TaskItemReadModel?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
+            var userId = currentUserAccessor.UserId ?? Guid.Empty;
             if (connection.State != ConnectionState.Open)
             {
                 await connection.OpenAsync(ct);
@@ -20,28 +22,36 @@ namespace TaskHub.Infrastructure.Repositories.Query
 
             const string sql = """
                                SELECT 
-                                   Id,
-                                   TaskListId,
-                                   Title,
-                                   Description,
-                                   Priority,
-                                   Status
-                               FROM task_items
-                               WHERE Id = @Id;
+                                   ti.Id,
+                                   ti.TaskListId,
+                                   ti.Title,
+                                   ti.Description,
+                                   ti.Priority,
+                                   ti.Status
+                               FROM task_items ti
+                               INNER JOIN task_lists tl ON tl.Id = ti.TaskListId
+                               WHERE ti.Id = @Id
+                                 AND tl.UserId = @UserId;
                                """;
 
 
-            var command = new CommandDefinition(sql, new { Id = id }, cancellationToken: ct);
+            var command = new CommandDefinition(
+                sql,
+                new { Id = id, UserId = userId },
+                cancellationToken: ct);
             return await connection.QuerySingleOrDefaultAsync<TaskItemReadModel>(command);
         }
 
         public async Task<PagedResult<TaskItemReadModel>> GetAllAsync(int page, int count, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
+            var userId = currentUserAccessor.UserId ?? Guid.Empty;
 
             const string sql = """
                                SELECT COUNT(*)
                                FROM task_items ti
+                               INNER JOIN task_lists tl ON tl.Id = ti.TaskListId
+                               WHERE tl.UserId = @UserId
 
                                SELECT
                                    ti.Id,
@@ -51,6 +61,8 @@ namespace TaskHub.Infrastructure.Repositories.Query
                                    ti.Priority,
                                    ti.Status
                                FROM task_items ti
+                               INNER JOIN task_lists tl ON tl.Id = ti.TaskListId
+                               WHERE tl.UserId = @UserId
                                ORDER BY ti.Title
                                OFFSET @skip ROWS
                                FETCH NEXT @take ROWS ONLY;
@@ -60,6 +72,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
                 sql,
                 new
                 {
+                    UserId = userId,
                     skip = (page - 1) * count,
                     take = count
                 },
@@ -80,6 +93,7 @@ namespace TaskHub.Infrastructure.Repositories.Query
         public async Task<IReadOnlyCollection<TaskItemReadModel>> GetByTaskListIdAsync(Guid taskListId, CancellationToken ct = default)
         {
             var connection = db.Database.GetDbConnection();
+            var userId = currentUserAccessor.UserId ?? Guid.Empty;
             if (connection.State != ConnectionState.Open)
             {
                 await connection.OpenAsync(ct);
@@ -94,11 +108,16 @@ namespace TaskHub.Infrastructure.Repositories.Query
                                    ti.Priority,
                                    ti.Status
                                FROM task_items ti
+                               INNER JOIN task_lists tl ON tl.Id = ti.TaskListId
                                WHERE ti.TaskListId = @TaskListId
+                                 AND tl.UserId = @UserId
                                ORDER BY ti.Title;
                                """;
 
-            var command = new CommandDefinition(sql, new { TaskListId = taskListId }, cancellationToken: ct);
+            var command = new CommandDefinition(
+                sql,
+                new { TaskListId = taskListId, UserId = userId },
+                cancellationToken: ct);
             var items = await connection.QueryAsync<TaskItemReadModel>(command);
             return items.ToList();
         }
