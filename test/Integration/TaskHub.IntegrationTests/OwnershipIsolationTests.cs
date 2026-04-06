@@ -94,6 +94,58 @@ public class OwnershipIsolationTests(IntegrationTestFixture fixture)
         Assert.Equal(HttpStatusCode.NotFound, statusResponse.StatusCode);
     }
 
+    [Fact]
+    public async Task ForeignTaskById_Reads_ReturnNotFoundForOtherUsers()
+    {
+        await fixture.ResetAsync();
+
+        using var userAClient = await fixture.CreateAuthorizedClientAsync(UserA);
+        using var userBClient = await fixture.CreateAuthorizedClientAsync(UserB);
+
+        var userAList = await CreateTaskListAsync(userAClient, "User A List");
+        var userBList = await CreateTaskListAsync(userBClient, "User B List");
+
+        var userATaskId = await CreateTaskItemAsync(userAClient, userAList.Id, "User A Task");
+        var userBTaskId = await CreateTaskItemAsync(userBClient, userBList.Id, "User B Task");
+
+        var userAReadingUserBTask = await userAClient.GetAsync($"/api/TaskItem/{userBTaskId}");
+        var userBReadingUserATask = await userBClient.GetAsync($"/api/TaskItem/{userATaskId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, userAReadingUserBTask.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, userBReadingUserATask.StatusCode);
+    }
+
+    [Fact]
+    public async Task PaginatedTaskItems_AreVisibleOnlyToTheirOwners()
+    {
+        await fixture.ResetAsync();
+
+        using var userAClient = await fixture.CreateAuthorizedClientAsync(UserA);
+        using var userBClient = await fixture.CreateAuthorizedClientAsync(UserB);
+
+        var userAList = await CreateTaskListAsync(userAClient, "User A List");
+        var userBList = await CreateTaskListAsync(userBClient, "User B List");
+
+        var userATaskOneId = await CreateTaskItemAsync(userAClient, userAList.Id, "User A Task One");
+        var userATaskTwoId = await CreateTaskItemAsync(userAClient, userAList.Id, "User A Task Two");
+        var userBTaskId = await CreateTaskItemAsync(userBClient, userBList.Id, "User B Task");
+
+        var userATasks = await userAClient.GetFromJsonAsync<PaginatedResponse<TaskItemLightResponse>>("/api/TaskItem?page=1&count=10");
+        var userBTasks = await userBClient.GetFromJsonAsync<PaginatedResponse<TaskItemLightResponse>>("/api/TaskItem?page=1&count=10");
+
+        Assert.NotNull(userATasks);
+        Assert.NotNull(userBTasks);
+
+        Assert.Equal(2, userATasks!.Items.Count);
+        Assert.Contains(userATasks.Items, item => item.Id == userATaskOneId && item.Title == "User A Task One");
+        Assert.Contains(userATasks.Items, item => item.Id == userATaskTwoId && item.Title == "User A Task Two");
+        Assert.DoesNotContain(userATasks.Items, item => item.Id == userBTaskId);
+
+        var visibleToUserB = Assert.Single(userBTasks!.Items);
+        Assert.Equal(userBTaskId, visibleToUserB.Id);
+        Assert.Equal("User B Task", visibleToUserB.Title);
+    }
+
     private static async Task<TaskListLightResponse> CreateTaskListAsync(HttpClient client, string title)
     {
         var response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest(title));
