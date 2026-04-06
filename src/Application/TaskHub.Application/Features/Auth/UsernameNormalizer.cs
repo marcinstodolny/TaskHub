@@ -1,8 +1,8 @@
 namespace TaskHub.Application.Features.Auth;
 
-public static class UsernameCanonicalizer
+public static class UsernameNormalizer
 {
-    public static string Canonicalize(string username)
+    public static string Normalize(string username)
     {
         return username.Trim().ToLowerInvariant();
     }
@@ -12,3 +12,4 @@ public static class UsernameCanonicalizer
         return username.Trim();
     }
 }
+

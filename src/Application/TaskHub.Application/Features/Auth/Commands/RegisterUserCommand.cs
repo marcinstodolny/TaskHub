@@ -23,8 +23,8 @@ public sealed class RegisterUserCommandHandler(
 
     public async Task<Result<RegistrationReadModel>> Handle(RegisterUserCommand request, CancellationToken ct)
     {
-        var trimmedUsername = UsernameCanonicalizer.TrimForDisplay(request.Username);
-        var normalizedUsername = UsernameCanonicalizer.Canonicalize(request.Username);
+        var trimmedUsername = UsernameNormalizer.TrimForDisplay(request.Username);
+        var normalizedUsername = UsernameNormalizer.Normalize(request.Username);
         var normalizedDisplayName = string.IsNullOrWhiteSpace(request.DisplayName)
             ? trimmedUsername
             : request.DisplayName.Trim();
@@ -76,3 +76,4 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
             .MaximumLength(200);
     }
 }
+

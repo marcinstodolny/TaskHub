@@ -10,7 +10,7 @@ public sealed class DatabaseUserAuthenticator(TaskHubDbContext dbContext, IUserP
 {
     public async Task<User?> AuthenticateAsync(string username, string password, CancellationToken cancellationToken = default)
     {
-        var canonicalUsername = UsernameCanonicalizer.Canonicalize(username);
+        var canonicalUsername = UsernameNormalizer.Normalize(username);
         var user = await dbContext.Users
             .SingleOrDefaultAsync(x => x.Username == canonicalUsername, cancellationToken);
 
@@ -24,3 +24,4 @@ public sealed class DatabaseUserAuthenticator(TaskHubDbContext dbContext, IUserP
             : null;
     }
 }
+

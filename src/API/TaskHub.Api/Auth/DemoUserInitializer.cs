@@ -22,8 +22,8 @@ public sealed class DemoUserInitializer(
             return;
         }
 
-        var canonicalUsername = UsernameCanonicalizer.Canonicalize(options.Username);
-        var fallbackDisplayName = UsernameCanonicalizer.TrimForDisplay(options.Username);
+        var canonicalUsername = UsernameNormalizer.Normalize(options.Username);
+        var fallbackDisplayName = UsernameNormalizer.TrimForDisplay(options.Username);
 
         var user = await dbContext.Users
             .SingleOrDefaultAsync(x => x.Id == options.UserId, cancellationToken);
@@ -77,3 +77,4 @@ public sealed class DemoUserInitializer(
         }
     }
 }
+
