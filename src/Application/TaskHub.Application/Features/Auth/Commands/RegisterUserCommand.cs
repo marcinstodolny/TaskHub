@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
+using TaskHub.Application.Exceptions;
 using TaskHub.Application.Features.Auth.ReadModels;
 using TaskHub.Domain.Base;
 using TaskHub.Domain.Entities;
@@ -39,7 +40,14 @@ public sealed class RegisterUserCommandHandler(
         }
 
         await userCommandRepository.AddAsync(userResult.Value, ct);
-        await unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DuplicateUsernameException)
+        {
+            return Result.Fail<RegistrationReadModel>($"User with username '{normalizedUsername}' already exists.");
+        }
 
         return Result.Success(new RegistrationReadModel(
             userResult.Value.Id,
@@ -66,3 +74,4 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
             .MaximumLength(200);
     }
 }
+
