@@ -77,7 +77,14 @@ namespace TaskHub.Api
                 .AddOptions<DemoAuthOptions>()
                 .BindConfiguration(DemoAuthOptions.SectionName);
 
+            var demoAuthSupportedEnvironment = builder.Environment.IsDevelopment()
+                || builder.Environment.IsEnvironment("Testing");
+
+            // Demo auth is intentionally a local/demo-only path. It assumes fresh-start usage
+            // with a seeded demo user and does not support legacy JWT compatibility.
             demoAuthOptionsBuilder
+                .Validate(options => !options.Enabled || demoAuthSupportedEnvironment,
+                    "Demo auth is supported only in Development and Testing environments.")
                 .Validate(options => !options.Enabled || options.UserId != Guid.Empty, "Demo auth user id is not configured.")
                 .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
                 .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")

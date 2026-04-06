@@ -56,6 +56,8 @@ You can run the project locally in two ways:
 - Run the API and Web projects directly from an IDE or via `dotnet run`. The checked-in development appsettings provide local JWT and demo-auth values, and the launch profiles provide the local environment and application URLs.
 - Run the full stack with Docker Compose. Before startup, create `.env` from `.env.example`:
 
+Demo auth is intended only for local/demo environments (`Development` and `Testing`). The expected workflow is a fresh start on an empty database, where the app seeds the demo user automatically. Compatibility with JWTs issued by older local runs is intentionally not supported; after auth-related changes, log in again and start from a fresh local database if needed.
+
 ```bash
 cp .env.example .env
 ```
