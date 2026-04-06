@@ -17,6 +17,8 @@ namespace TaskHub.Api
 {
     public class Program
     {
+        private const string AddUsersTableMigrationId = "20260406163148_AddUsersTable";
+
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -145,14 +147,14 @@ namespace TaskHub.Api
                         var appliedMigrations = dbContext.Database.GetAppliedMigrations().ToHashSet(StringComparer.OrdinalIgnoreCase);
                         var pendingMigrations = dbContext.Database.GetPendingMigrations().ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                        if (!appliedMigrations.Contains(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId)
-                            && pendingMigrations.Contains(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId))
+                        if (!appliedMigrations.Contains(AddUsersTableMigrationId)
+                            && pendingMigrations.Contains(AddUsersTableMigrationId))
                         {
-                            migrator.Migrate(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId);
-                            logger.LogInformation("Migration {MigrationId} applied.", AuthSchemaAvailabilityChecker.AddUsersTableMigrationId);
+                            migrator.Migrate(AddUsersTableMigrationId);
+                            logger.LogInformation("Migration {MigrationId} applied.", AddUsersTableMigrationId);
                         }
 
-                        if (dbContext.Database.GetAppliedMigrations().Contains(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId, StringComparer.OrdinalIgnoreCase))
+                        if (dbContext.Database.GetAppliedMigrations().Contains(AddUsersTableMigrationId, StringComparer.OrdinalIgnoreCase))
                         {
                             demoUserInitializer.EnsureDemoUserAsync().GetAwaiter().GetResult();
                         }

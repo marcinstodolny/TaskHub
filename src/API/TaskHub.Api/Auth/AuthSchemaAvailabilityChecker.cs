@@ -5,14 +5,17 @@ namespace TaskHub.Api.Auth;
 
 public sealed class AuthSchemaAvailabilityChecker(TaskHubDbContext dbContext) : IAuthSchemaAvailabilityChecker
 {
-    public const string AddUsersTableMigrationId = "20260406163148_AddUsersTable";
-
     public async Task<bool> IsUsersSchemaAvailableAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken);
-            return appliedMigrations.Contains(AddUsersTableMigrationId, StringComparer.OrdinalIgnoreCase);
+            await dbContext.Users
+                .AsNoTracking()
+                .Select(static user => user.Id)
+                .Take(1)
+                .ToListAsync(cancellationToken);
+
+            return true;
         }
         catch (Exception)
         {
