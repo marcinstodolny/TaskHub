@@ -1,9 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using TaskHub.Api.Auth;
-using TaskHub.Api.Auth.Options;
 using TaskHub.Application.Features.Auth.Commands;
 using TaskHub.Contracts.Auth;
 
@@ -13,7 +11,6 @@ namespace TaskHub.Api.Controllers;
 [Route("api/[controller]")]
 public sealed class AuthController(
     IMediator mediator,
-    IOptions<DemoAuthOptions> demoAuthOptions,
     DatabaseUserAuthenticator userAuthenticator,
     JwtTokenGenerator tokenGenerator) : ControllerBase
 {
@@ -32,12 +29,6 @@ public sealed class AuthController(
     [AllowAnonymous]
     public async Task<ActionResult<TokenResponse>> CreateToken([FromBody] TokenRequest request, CancellationToken cancellationToken)
     {
-        var demoUser = demoAuthOptions.Value;
-        if (!demoUser.Enabled)
-        {
-            return NotFound();
-        }
-
         var user = await userAuthenticator.AuthenticateAsync(request.Username, request.Password, cancellationToken);
         if (user is null)
         {
