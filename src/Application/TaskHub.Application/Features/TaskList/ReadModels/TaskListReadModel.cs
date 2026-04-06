@@ -15,6 +15,7 @@ namespace TaskHub.Application.Features.TaskList.ReadModels
 
     public sealed record TaskListDetailsReadModel : TaskListReadModelBase
     {
+        public int TasksCount { get; init; } = 0;
         public List<TaskItemReadModel> Tasks { get; init; } = [];
     }
 }
