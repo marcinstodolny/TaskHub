@@ -1,0 +1,28 @@
+using TaskHub.Domain.Abstraction;
+using TaskHub.Domain.Base;
+
+namespace TaskHub.Domain.Entities
+{
+    public sealed class User : Entity<Guid>
+    {
+        public string Username { get; private set; } = string.Empty;
+        public string PasswordHash { get; private set; } = string.Empty;
+        public string DisplayName { get; private set; } = string.Empty;
+        public string Role { get; private set; } = string.Empty;
+
+        private User() { }
+
+        private User(Guid id, string username, string passwordHash, string displayName, string role) : base(id)
+        {
+            Username = username;
+            PasswordHash = passwordHash;
+            DisplayName = displayName;
+            Role = role;
+        }
+
+        public static Result<User> Create(string username, string passwordHash, string displayName, string role)
+        {
+            return Result.Success(new User(Guid.NewGuid(), username, passwordHash, displayName, role));
+        }
+    }
+}
