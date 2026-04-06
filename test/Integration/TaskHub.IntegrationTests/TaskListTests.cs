@@ -151,6 +151,17 @@ public class TaskListTests(IntegrationTestFixture fixture)
     }
 
     [Fact]
+    public async Task Create_WithoutCurrentUser_ShouldReturnFailure()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Unauthenticated list"), null);
+
+        Assert.True(createListResult.IsFailed);
+        Assert.Contains(createListResult.Errors, error => error.Contains("Current authenticated user identifier", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Invalid_Get_MissingTaskList_ShouldReturnFailure()
     {
         await fixture.ResetAsync();
@@ -235,7 +246,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign title"));
+        var createResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign title"), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.PutAsJsonAsync($"/api/TaskList/{createResult.Value.Id}", new UpdateTaskListRequest("Updated Title"));
@@ -268,7 +279,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign delete"));
+        var createResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign delete"), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.DeleteAsync($"/api/TaskList/{createResult.Value.Id}");

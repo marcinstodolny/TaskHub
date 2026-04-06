@@ -48,10 +48,17 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
 
     public async Task ResetAsync() => await Database.ResetDatabaseAsync();
 
-    public async Task<TResult> SendAsync<TResult>(IRequest<TResult> request, CancellationToken ct = default)
+    public Task<TResult> SendAsync<TResult>(IRequest<TResult> request, CancellationToken ct = default)
+    {
+        return SendAsUserAsync(request, TaskHubApiFactory.TestUsername, ct);
+    }
+
+    public async Task<TResult> SendAsUserAsync<TResult>(IRequest<TResult> request, string? userIdentifier, CancellationToken ct = default)
     {
         await using var scope = Services.CreateAsyncScope();
+        var currentUserAccessor = scope.ServiceProvider.GetRequiredService<TestCurrentUserAccessor>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        using var _ = currentUserAccessor.BeginScope(userIdentifier);
         return await sender.Send(request, ct);
     }
 

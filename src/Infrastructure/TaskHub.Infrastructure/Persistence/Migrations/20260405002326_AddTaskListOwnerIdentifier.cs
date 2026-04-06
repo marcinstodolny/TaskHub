@@ -7,7 +7,6 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddTaskListOwnerIdentifier : Migration
     {
-
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -20,9 +19,10 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
 
             migrationBuilder.Sql(
                 """
-                 UPDATE task_lists
-                 SET OwnerIdentifier = 'DefaultUser'
-                 WHERE OwnerIdentifier IS NULL;
+                 IF EXISTS (SELECT 1 FROM task_lists)
+                 BEGIN
+                     THROW 51000, 'Cannot apply TaskList.OwnerIdentifier migration automatically for existing task_lists data. Backfill OwnerIdentifier values manually, then re-run the migration.', 1;
+                 END
                  """);
 
             migrationBuilder.AlterColumn<string>(

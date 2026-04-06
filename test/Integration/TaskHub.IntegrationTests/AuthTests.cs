@@ -51,7 +51,7 @@ public class AuthTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign list"));
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign list"), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.GetAsync($"/api/TaskList/{createListResult.Value.Id}");

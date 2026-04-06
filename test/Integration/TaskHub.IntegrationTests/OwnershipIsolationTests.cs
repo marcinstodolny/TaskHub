@@ -1,13 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
 using TaskHub.Contracts.Common;
 using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
 using TaskHub.Domain.Enums;
-using TaskHub.Domain.ValueObjects;
 using TaskHub.IntegrationTests.Infrastructure;
-using TaskHub.Infrastructure.Persistence;
 using Xunit;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
@@ -16,7 +13,6 @@ namespace TaskHub.IntegrationTests;
 [Collection(nameof(IntegrationTestCollection))]
 public class OwnershipIsolationTests(IntegrationTestFixture fixture)
 {
-    private const string LegacyDemoUser = "DefaultUser";
     private const string UserA = "integration-user-a";
     private const string UserB = "integration-user-b";
 
@@ -150,31 +146,6 @@ public class OwnershipIsolationTests(IntegrationTestFixture fixture)
         Assert.Equal("User B Task", visibleToUserB.Title);
     }
 
-    [Fact]
-    public async Task LegacyBackfilledTaskList_RemainsReachableForLegacyDemoUser()
-    {
-        await fixture.ResetAsync();
-
-        var (legacyListId, _) = await SeedLegacyOwnedTaskListAsync();
-
-        using var legacyClient = await fixture.CreateAuthorizedClientAsync(LegacyDemoUser);
-
-        var pagedResponse = await legacyClient.GetFromJsonAsync<PaginatedResponse<TaskListLightResponse>>("/api/TaskList?page=1&count=10");
-        var detailsResponse = await legacyClient.GetFromJsonAsync<TaskListLightResponse>($"/api/TaskList/{legacyListId}");
-
-        Assert.NotNull(pagedResponse);
-        Assert.NotNull(detailsResponse);
-
-        var visibleList = Assert.Single(pagedResponse!.Items);
-        Assert.Equal(legacyListId, visibleList.Id);
-        Assert.Equal("Legacy migrated list", visibleList.Title);
-        Assert.Equal(1, visibleList.TasksCount);
-
-        Assert.Equal(legacyListId, detailsResponse!.Id);
-        Assert.Equal("Legacy migrated list", detailsResponse.Title);
-        Assert.Equal(1, detailsResponse.TasksCount);
-    }
-
     private static async Task<TaskListLightResponse> CreateTaskListAsync(HttpClient client, string title)
     {
         var response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest(title));
@@ -195,28 +166,4 @@ public class OwnershipIsolationTests(IntegrationTestFixture fixture)
         return await response.Content.ReadFromJsonAsync<Guid>();
     }
 
-    private async Task<(Guid ListId, Guid TaskId)> SeedLegacyOwnedTaskListAsync()
-    {
-        await using var scope = fixture.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<TaskHubDbContext>();
-
-        var listTitleResult = TaskListTitle.Create("Legacy migrated list");
-        Assert.True(listTitleResult.IsSuccess);
-
-        var taskListResult = TaskHub.Domain.Entities.TaskList.Create(listTitleResult.Value, LegacyDemoUser);
-        Assert.True(taskListResult.IsSuccess);
-
-        var taskTitleResult = TaskItemTitle.Create("Legacy migrated task");
-        var taskDescriptionResult = TaskDescription.Create("Legacy migrated description");
-        Assert.True(taskTitleResult.IsSuccess);
-        Assert.True(taskDescriptionResult.IsSuccess);
-
-        var addTaskResult = taskListResult.Value.AddTask(taskTitleResult.Value, taskDescriptionResult.Value, TaskPriority.High);
-        Assert.True(addTaskResult.IsSuccess);
-
-        await dbContext.TaskLists.AddAsync(taskListResult.Value);
-        await dbContext.SaveChangesAsync();
-
-        return (taskListResult.Value.Id, addTaskResult.Value.Id);
-    }
 }

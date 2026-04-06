@@ -23,7 +23,12 @@ namespace TaskHub.Application.Features.TaskList.Commands
                 return Result.Fail<TaskListSummaryReadModel>(titleResult.Errors);
             }
 
-            var ownerIdentifier = currentUserAccessor.UserIdentifier ?? string.Empty;
+            var ownerIdentifier = currentUserAccessor.UserIdentifier;
+            if (string.IsNullOrWhiteSpace(ownerIdentifier))
+            {
+                return Result.Fail<TaskListSummaryReadModel>("Current authenticated user identifier is required to create a task list.");
+            }
+
             var taskList = Domain.Entities.TaskList.Create(titleResult.Value, ownerIdentifier);
             if (taskList.IsFailed)
             {

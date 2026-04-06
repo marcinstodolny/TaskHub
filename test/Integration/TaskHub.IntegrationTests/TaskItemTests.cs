@@ -453,7 +453,7 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign task list"));
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign task list"), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.PostAsJsonAsync(
@@ -468,12 +468,12 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign update list"));
-        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign update list"), "foreign-user");
+        var createItemResult = await fixture.SendAsUserAsync(new CreateTaskItemCommand(
             createListResult.Value.Id,
             "Foreign task",
             "Description",
-            TaskPriority.Normal));
+            TaskPriority.Normal), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.PutAsJsonAsync(
@@ -488,12 +488,12 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign delete list"));
-        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign delete list"), "foreign-user");
+        var createItemResult = await fixture.SendAsUserAsync(new CreateTaskItemCommand(
             createListResult.Value.Id,
             "Foreign task",
             "Description",
-            TaskPriority.Normal));
+            TaskPriority.Normal), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.DeleteAsync($"/api/TaskItem/{createItemResult.Value}");
@@ -506,12 +506,12 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign status list"));
-        var createItemResult = await fixture.SendAsync(new CreateTaskItemCommand(
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign status list"), "foreign-user");
+        var createItemResult = await fixture.SendAsUserAsync(new CreateTaskItemCommand(
             createListResult.Value.Id,
             "Foreign task",
             "Description",
-            TaskPriority.Normal));
+            TaskPriority.Normal), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.PostAsJsonAsync(
@@ -526,12 +526,12 @@ public class TaskItemTests(IntegrationTestFixture fixture)
     {
         await fixture.ResetAsync();
 
-        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("Foreign board list"));
-        await fixture.SendAsync(new CreateTaskItemCommand(
+        var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Foreign board list"), "foreign-user");
+        await fixture.SendAsUserAsync(new CreateTaskItemCommand(
             createListResult.Value.Id,
             "Foreign board task",
             "Description",
-            TaskPriority.Normal));
+            TaskPriority.Normal), "foreign-user");
 
         using var client = await fixture.CreateAuthorizedClientAsync();
         var response = await client.GetAsync($"/api/TaskItem/board/{createListResult.Value.Id}");
