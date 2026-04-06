@@ -46,7 +46,14 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
         await Database.DisposeAsync();
     }
 
-    public async Task ResetAsync() => await Database.ResetDatabaseAsync();
+    public async Task ResetAsync()
+    {
+        await Database.ResetDatabaseAsync();
+
+        await using var scope = Services.CreateAsyncScope();
+        var demoUserInitializer = scope.ServiceProvider.GetRequiredService<DemoUserInitializer>();
+        await demoUserInitializer.EnsureDefaultUserAsync();
+    }
 
     public Task<TResult> SendAsync<TResult>(IRequest<TResult> request, CancellationToken ct = default)
     {
@@ -86,7 +93,7 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
         var tokenGenerator = scope.ServiceProvider.GetRequiredService<JwtTokenGenerator>();
         var demoAuthOptions = scope.ServiceProvider.GetRequiredService<IOptions<DemoAuthOptions>>();
 
-        var token = tokenGenerator.Generate(userIdentifier, demoAuthOptions.Value.Role);
+        var token = tokenGenerator.Generate(userIdentifier, userIdentifier, demoAuthOptions.Value.Role);
 
         var client = ApiFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

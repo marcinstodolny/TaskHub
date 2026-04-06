@@ -9,11 +9,14 @@ namespace TaskHub.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class AuthController(IOptions<DemoAuthOptions> demoAuthOptions, JwtTokenGenerator tokenGenerator) : ControllerBase
+public sealed class AuthController(
+    IOptions<DemoAuthOptions> demoAuthOptions,
+    DatabaseUserAuthenticator userAuthenticator,
+    JwtTokenGenerator tokenGenerator) : ControllerBase
 {
     [HttpPost("token")]
     [AllowAnonymous]
-    public ActionResult<TokenResponse> CreateToken([FromBody] TokenRequest request)
+    public async Task<ActionResult<TokenResponse>> CreateToken([FromBody] TokenRequest request, CancellationToken cancellationToken)
     {
         var demoUser = demoAuthOptions.Value;
         if (!demoUser.Enabled)
@@ -21,13 +24,13 @@ public sealed class AuthController(IOptions<DemoAuthOptions> demoAuthOptions, Jw
             return NotFound();
         }
 
-        if (!string.Equals(request.Username, demoUser.Username, StringComparison.Ordinal)
-            || !string.Equals(request.Password, demoUser.Password, StringComparison.Ordinal))
+        var user = await userAuthenticator.AuthenticateAsync(request.Username, request.Password, cancellationToken);
+        if (user is null)
         {
             return Unauthorized();
         }
 
-        var token = tokenGenerator.Generate(demoUser.Username, demoUser.Role);
+        var token = tokenGenerator.Generate(user.Id, user.Username, user.Role);
         return Ok(new TokenResponse(token));
     }
 

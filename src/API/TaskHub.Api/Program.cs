@@ -59,6 +59,7 @@ namespace TaskHub.Api
             builder.Services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
             builder.Services.AddSingleton<IUserPasswordHasher, AspNetUserPasswordHasher>();
             builder.Services.AddScoped<DemoUserInitializer>();
+            builder.Services.AddScoped<DatabaseUserAuthenticator>();
 
             builder.Services
                 .AddOptions<JwtOptions>()
@@ -116,7 +117,7 @@ namespace TaskHub.Api
                 app.UseSwaggerUI();
             }
 
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
             {
                 using var scope = app.Services.CreateScope();
                 var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DbMigrations");
