@@ -17,8 +17,6 @@ namespace TaskHub.Api
 {
     public class Program
     {
-        private const string AddUsersTableMigrationId = "20260406163148_AddUsersTable";
-
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -63,6 +61,7 @@ namespace TaskHub.Api
             builder.Services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
             builder.Services.AddSingleton<IUserPasswordHasher, AspNetUserPasswordHasher>();
             builder.Services.AddScoped<DemoUserInitializer>();
+            builder.Services.AddScoped<IAuthSchemaAvailabilityChecker, AuthSchemaAvailabilityChecker>();
             builder.Services.AddScoped<DatabaseUserAuthenticator>();
 
             builder.Services
@@ -146,14 +145,14 @@ namespace TaskHub.Api
                         var appliedMigrations = dbContext.Database.GetAppliedMigrations().ToHashSet(StringComparer.OrdinalIgnoreCase);
                         var pendingMigrations = dbContext.Database.GetPendingMigrations().ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                        if (!appliedMigrations.Contains(AddUsersTableMigrationId)
-                            && pendingMigrations.Contains(AddUsersTableMigrationId))
+                        if (!appliedMigrations.Contains(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId)
+                            && pendingMigrations.Contains(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId))
                         {
-                            migrator.Migrate(AddUsersTableMigrationId);
-                            logger.LogInformation("Migration {MigrationId} applied.", AddUsersTableMigrationId);
+                            migrator.Migrate(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId);
+                            logger.LogInformation("Migration {MigrationId} applied.", AuthSchemaAvailabilityChecker.AddUsersTableMigrationId);
                         }
 
-                        if (dbContext.Database.GetAppliedMigrations().Contains(AddUsersTableMigrationId, StringComparer.OrdinalIgnoreCase))
+                        if (dbContext.Database.GetAppliedMigrations().Contains(AuthSchemaAvailabilityChecker.AddUsersTableMigrationId, StringComparer.OrdinalIgnoreCase))
                         {
                             demoUserInitializer.EnsureDemoUserAsync().GetAwaiter().GetResult();
                         }

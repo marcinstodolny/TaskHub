@@ -11,6 +11,7 @@ namespace TaskHub.Api.Controllers;
 [Route("api/[controller]")]
 public sealed class AuthController(
     IMediator mediator,
+    IAuthSchemaAvailabilityChecker authSchemaAvailabilityChecker,
     DatabaseUserAuthenticator userAuthenticator,
     JwtTokenGenerator tokenGenerator) : ControllerBase
 {
@@ -18,6 +19,14 @@ public sealed class AuthController(
     [AllowAnonymous]
     public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegistrationRequest request, CancellationToken cancellationToken)
     {
+        if (!await authSchemaAvailabilityChecker.IsUsersSchemaAvailableAsync(cancellationToken))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Authentication is unavailable",
+                detail: "The users schema is not available yet. Apply database migrations and try again.");
+        }
+
         var result = await mediator.Send(new RegisterUserCommand(request.Username, request.Password, request.DisplayName), cancellationToken);
 
         return result.IsFailed
@@ -29,6 +38,14 @@ public sealed class AuthController(
     [AllowAnonymous]
     public async Task<ActionResult<TokenResponse>> CreateToken([FromBody] TokenRequest request, CancellationToken cancellationToken)
     {
+        if (!await authSchemaAvailabilityChecker.IsUsersSchemaAvailableAsync(cancellationToken))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Authentication is unavailable",
+                detail: "The users schema is not available yet. Apply database migrations and try again.");
+        }
+
         var user = await userAuthenticator.AuthenticateAsync(request.Username, request.Password, cancellationToken);
         if (user is null)
         {
