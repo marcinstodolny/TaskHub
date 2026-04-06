@@ -158,7 +158,7 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var createListResult = await fixture.SendAsUserAsync(new CreateTaskListCommand("Unauthenticated list"), null);
 
         Assert.True(createListResult.IsFailed);
-        Assert.Contains(createListResult.Errors, error => error.Contains("Current authenticated user identifier", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(createListResult.Errors, error => error.Contains("Current authenticated user id", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

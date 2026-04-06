@@ -100,10 +100,10 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
         return client;
     }
 
-    public async Task<HttpClient> CreateAuthorizedClientAsync(string userIdentifier, CancellationToken ct = default)
+    public async Task<HttpClient> CreateAuthorizedClientAsync(string usernameOrUserId, CancellationToken ct = default)
     {
         await using var scope = Services.CreateAsyncScope();
-        var user = await ResolveOrCreateUserAsync(scope.ServiceProvider, userIdentifier, ct);
+        var user = await ResolveOrCreateUserAsync(scope.ServiceProvider, usernameOrUserId, ct);
         return CreateAuthorizedClient(user, scope.ServiceProvider);
     }
 
@@ -135,21 +135,21 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
         return user.Id;
     }
 
-    private static async Task<User> ResolveOrCreateUserAsync(IServiceProvider serviceProvider, string userIdentifier, CancellationToken ct)
+    private static async Task<User> ResolveOrCreateUserAsync(IServiceProvider serviceProvider, string usernameOrUserId, CancellationToken ct)
     {
-        if (Guid.TryParse(userIdentifier, out var userId))
+        if (Guid.TryParse(usernameOrUserId, out var userId))
         {
-            return await ResolveOrCreateUserAsync(serviceProvider, userId, userIdentifier, ct);
+            return await ResolveOrCreateUserAsync(serviceProvider, userId, usernameOrUserId, ct);
         }
 
         var dbContext = serviceProvider.GetRequiredService<TaskHubDbContext>();
-        var existingUserByUsername = await dbContext.Users.SingleOrDefaultAsync(x => x.Username == userIdentifier, ct);
+        var existingUserByUsername = await dbContext.Users.SingleOrDefaultAsync(x => x.Username == usernameOrUserId, ct);
         if (existingUserByUsername is not null)
         {
             return existingUserByUsername;
         }
 
-        return await ResolveOrCreateUserAsync(serviceProvider, Guid.NewGuid(), userIdentifier, ct);
+        return await ResolveOrCreateUserAsync(serviceProvider, Guid.NewGuid(), usernameOrUserId, ct);
     }
 
     private static async Task<User> ResolveOrCreateUserAsync(IServiceProvider serviceProvider, Guid userId, string username, CancellationToken ct)
