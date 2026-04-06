@@ -3,6 +3,7 @@ using MediatR;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.abstraction.Repository.Command;
 using TaskHub.Application.Exceptions;
+using TaskHub.Application.Features.Auth;
 using TaskHub.Application.Features.Auth.ReadModels;
 using TaskHub.Domain.Base;
 using TaskHub.Domain.Entities;
@@ -22,9 +23,10 @@ public sealed class RegisterUserCommandHandler(
 
     public async Task<Result<RegistrationReadModel>> Handle(RegisterUserCommand request, CancellationToken ct)
     {
-        var normalizedUsername = request.Username.Trim();
+        var trimmedUsername = UsernameCanonicalizer.TrimForDisplay(request.Username);
+        var normalizedUsername = UsernameCanonicalizer.Canonicalize(request.Username);
         var normalizedDisplayName = string.IsNullOrWhiteSpace(request.DisplayName)
-            ? normalizedUsername
+            ? trimmedUsername
             : request.DisplayName.Trim();
 
         if (await userCommandRepository.ExistsByUsernameAsync(normalizedUsername, ct))
@@ -74,4 +76,3 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
             .MaximumLength(200);
     }
 }
-

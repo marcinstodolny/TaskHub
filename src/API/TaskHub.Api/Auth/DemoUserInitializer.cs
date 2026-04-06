@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TaskHub.Api.Auth.Options;
 using TaskHub.Application.abstraction;
+using TaskHub.Application.Features.Auth;
 using TaskHub.Domain.Entities;
 using TaskHub.Infrastructure.Persistence;
 
@@ -21,20 +22,23 @@ public sealed class DemoUserInitializer(
             return;
         }
 
+        var canonicalUsername = UsernameCanonicalizer.Canonicalize(options.Username);
+        var fallbackDisplayName = UsernameCanonicalizer.TrimForDisplay(options.Username);
+
         var user = await dbContext.Users
             .SingleOrDefaultAsync(x => x.Id == options.UserId, cancellationToken);
 
         user ??= await dbContext.Users
-            .SingleOrDefaultAsync(x => x.Username == options.Username, cancellationToken);
+            .SingleOrDefaultAsync(x => x.Username == canonicalUsername, cancellationToken);
 
         var displayName = string.IsNullOrWhiteSpace(options.DisplayName)
-            ? options.Username
-            : options.DisplayName;
+            ? fallbackDisplayName
+            : options.DisplayName.Trim();
 
         if (user is null)
         {
             var passwordHash = passwordHasher.HashPassword(options.Password);
-            var createResult = User.Create(options.UserId, options.Username, passwordHash, displayName, options.Role);
+            var createResult = User.Create(options.UserId, canonicalUsername, passwordHash, displayName, options.Role);
             if (createResult.IsFailed)
             {
                 throw new InvalidOperationException(string.Join("; ", createResult.Errors));
@@ -42,13 +46,13 @@ public sealed class DemoUserInitializer(
 
             await dbContext.Users.AddAsync(createResult.Value, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Seeded demo user '{Username}' with id '{UserId}'.", options.Username, options.UserId);
+            logger.LogInformation("Seeded demo user '{Username}' with id '{UserId}'.", canonicalUsername, options.UserId);
             return;
         }
 
         var passwordMatches = passwordHasher.VerifyPassword(user.PasswordHash, options.Password);
         var requiresUpdate =
-            !string.Equals(user.Username, options.Username, StringComparison.Ordinal) ||
+            !string.Equals(user.Username, canonicalUsername, StringComparison.Ordinal) ||
             !string.Equals(user.DisplayName, displayName, StringComparison.Ordinal) ||
             !string.Equals(user.Role, options.Role, StringComparison.Ordinal) ||
             !passwordMatches;
@@ -59,7 +63,7 @@ public sealed class DemoUserInitializer(
                 ? user.PasswordHash
                 : passwordHasher.HashPassword(options.Password);
 
-            user.Synchronize(options.Username, passwordHash, displayName, options.Role);
+            user.Synchronize(canonicalUsername, passwordHash, displayName, options.Role);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
