@@ -57,6 +57,8 @@ namespace TaskHub.Api
             builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
+            builder.Services.AddSingleton<IUserPasswordHasher, AspNetUserPasswordHasher>();
+            builder.Services.AddScoped<DemoUserInitializer>();
 
             builder.Services
                 .AddOptions<JwtOptions>()
@@ -71,8 +73,10 @@ namespace TaskHub.Api
                 .BindConfiguration(DemoAuthOptions.SectionName);
 
             demoAuthOptionsBuilder
+                .Validate(options => !options.Enabled || options.UserId != Guid.Empty, "Demo auth user id is not configured.")
                 .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Username), "Demo auth username is not configured.")
                 .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Password), "Demo auth password is not configured.")
+                .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.DisplayName), "Demo auth display name is not configured.")
                 .ValidateOnStart();
 
             builder.Services.AddSingleton<JwtTokenGenerator>();
@@ -138,6 +142,9 @@ namespace TaskHub.Api
                         Thread.Sleep(TimeSpan.FromSeconds(2));
                     }
                 }
+
+                var demoUserInitializer = scope.ServiceProvider.GetRequiredService<DemoUserInitializer>();
+                demoUserInitializer.EnsureDefaultUserAsync().GetAwaiter().GetResult();
             }
 
             if (!app.Environment.IsDevelopment())
