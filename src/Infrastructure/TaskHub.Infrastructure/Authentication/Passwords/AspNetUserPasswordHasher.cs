@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using TaskHub.Application.abstraction;
 
-namespace TaskHub.Api.Auth;
+namespace TaskHub.Infrastructure.Authentication.Passwords;
 
 public sealed class AspNetUserPasswordHasher : IUserPasswordHasher
 {

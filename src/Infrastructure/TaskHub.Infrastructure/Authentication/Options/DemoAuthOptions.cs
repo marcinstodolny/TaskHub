@@ -1,4 +1,4 @@
-namespace TaskHub.Api.Auth.Options;
+namespace TaskHub.Infrastructure.Authentication.Options;
 
 public sealed class DemoAuthOptions
 {

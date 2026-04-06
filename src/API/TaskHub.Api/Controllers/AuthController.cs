@@ -1,33 +1,24 @@
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TaskHub.Api.Auth;
+using TaskHub.Api.Filters;
+using TaskHub.Application.Features.Auth;
 using TaskHub.Application.Features.Auth.Commands;
 using TaskHub.Contracts.Auth;
+using ISender = MediatR.ISender;
 
 namespace TaskHub.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[ServiceFilter(typeof(RequireAuthSchemaAvailableFilter))]
 public sealed class AuthController(
-    IMediator mediator,
-    IAuthSchemaAvailabilityChecker authSchemaAvailabilityChecker,
-    DatabaseUserAuthenticator userAuthenticator,
-    JwtTokenGenerator tokenGenerator) : ControllerBase
+    ISender sender) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegistrationRequest request, CancellationToken cancellationToken)
     {
-        if (!await authSchemaAvailabilityChecker.IsUsersSchemaAvailableAsync(cancellationToken))
-        {
-            return Problem(
-                statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "Authentication is unavailable",
-                detail: "The users schema is not available yet. Apply database migrations and try again.");
-        }
-
-        var result = await mediator.Send(new RegisterUserCommand(request.Username, request.Password, request.DisplayName), cancellationToken);
+        var result = await sender.Send(new RegisterUserCommand(request.Username, request.Password, request.DisplayName), cancellationToken);
 
         return result.IsFailed
             ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to register user")
@@ -38,22 +29,13 @@ public sealed class AuthController(
     [AllowAnonymous]
     public async Task<ActionResult<TokenResponse>> CreateToken([FromBody] TokenRequest request, CancellationToken cancellationToken)
     {
-        if (!await authSchemaAvailabilityChecker.IsUsersSchemaAvailableAsync(cancellationToken))
-        {
-            return Problem(
-                statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "Authentication is unavailable",
-                detail: "The users schema is not available yet. Apply database migrations and try again.");
-        }
+        var result = await sender.Send(new LoginUserCommand(request.Username, request.Password), cancellationToken);
 
-        var user = await userAuthenticator.AuthenticateAsync(request.Username, request.Password, cancellationToken);
-        if (user is null)
+        return result.IsFailed switch
         {
-            return Unauthorized();
-        }
-
-        var token = tokenGenerator.Generate(user.Id, user.Username, user.Role);
-        return Ok(new TokenResponse(token));
+            true when result.Errors.Contains(LoginUserErrors.InvalidCredentials, StringComparer.Ordinal) => Unauthorized(),
+            true => this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to sign in"),
+            _ => Ok(new TokenResponse(result.Value.AccessToken))
+        };
     }
-
 }

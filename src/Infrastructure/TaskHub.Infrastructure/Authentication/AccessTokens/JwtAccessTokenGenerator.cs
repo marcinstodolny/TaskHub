@@ -3,15 +3,16 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using TaskHub.Api.Auth.Options;
+using TaskHub.Application.abstraction;
+using TaskHub.Infrastructure.Authentication.Options;
 
-namespace TaskHub.Api.Auth;
+namespace TaskHub.Infrastructure.Authentication.AccessTokens;
 
-public sealed class JwtTokenGenerator(IOptions<JwtOptions> options)
+public sealed class JwtAccessTokenGenerator(IOptions<JwtOptions> options) : IAccessTokenGenerator
 {
     private readonly JwtOptions _jwtOptions = options.Value;
 
-    public string Generate(Guid userId, string username, string role)
+    public string GenerateAccessToken(Guid userId, string username, string role)
     {
         var now = DateTime.UtcNow;
         var userIdValue = userId.ToString();

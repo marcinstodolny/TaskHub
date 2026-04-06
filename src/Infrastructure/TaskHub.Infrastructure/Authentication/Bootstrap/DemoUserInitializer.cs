@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using TaskHub.Api.Auth.Options;
 using TaskHub.Application.abstraction;
 using TaskHub.Application.Features.Auth;
 using TaskHub.Domain.Entities;
+using TaskHub.Infrastructure.Authentication.Options;
 using TaskHub.Infrastructure.Persistence;
 
-namespace TaskHub.Api.Auth;
+namespace TaskHub.Infrastructure.Authentication.Bootstrap;
 
 public sealed class DemoUserInitializer(
     TaskHubDbContext dbContext,
@@ -77,4 +78,3 @@ public sealed class DemoUserInitializer(
         }
     }
 }
-

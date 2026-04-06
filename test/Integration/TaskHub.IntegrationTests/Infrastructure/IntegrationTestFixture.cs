@@ -4,11 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using TaskHub.Api.Auth;
-using TaskHub.Api.Auth.Options;
 using TaskHub.Application.abstraction;
 using TaskHub.Contracts.Auth;
 using TaskHub.Domain.Entities;
+using TaskHub.Infrastructure.Authentication.Bootstrap;
+using TaskHub.Infrastructure.Authentication.Options;
 using TaskHub.Infrastructure.Persistence;
 using Xunit;
 
@@ -200,8 +200,8 @@ public sealed class IntegrationTestFixture : IAsyncLifetime
 
     private HttpClient CreateAuthorizedClient(User user, IServiceProvider serviceProvider)
     {
-        var tokenGenerator = serviceProvider.GetRequiredService<JwtTokenGenerator>();
-        var token = tokenGenerator.Generate(user.Id, user.Username, user.Role);
+        var tokenGenerator = serviceProvider.GetRequiredService<IAccessTokenGenerator>();
+        var token = tokenGenerator.GenerateAccessToken(user.Id, user.Username, user.Role);
 
         var client = ApiFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
