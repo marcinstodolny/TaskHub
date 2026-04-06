@@ -63,6 +63,7 @@ namespace TaskHub.Api
             builder.Services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
             builder.Services.AddSingleton<IUserPasswordHasher, AspNetUserPasswordHasher>();
             builder.Services.AddScoped<DemoUserInitializer>();
+            builder.Services.AddScoped<IAuthSchemaAvailabilityChecker, AuthSchemaAvailabilityChecker>();
             builder.Services.AddScoped<DatabaseUserAuthenticator>();
 
             builder.Services

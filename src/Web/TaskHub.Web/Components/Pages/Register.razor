@@ -1,0 +1,213 @@
+@page "/register"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using System.Net
+@using System.Text.Json
+@using Microsoft.AspNetCore.Mvc
+@using TaskHub.Contracts.Auth
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject TaskHub.Web.Auth.AuthSession AuthSession
+
+<PageTitle>Register</PageTitle>
+
+<h1>Register</h1>
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        @if (AuthSession.IsAuthenticated)
+        {
+            <div class="alert alert-success" role="alert">
+                Signed in as <strong>@AuthSession.Username</strong>.
+            </div>
+
+            <div class="d-flex gap-2">
+                <a class="btn btn-primary" href="@GetReturnUrl()">Continue</a>
+                <a class="btn btn-outline-secondary" href="/login">Go to login</a>
+            </div>
+        }
+        else
+        {
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted">
+                        Create a TaskHub account, then sign in to start using the task board.
+                    </p>
+
+                    <p class="small mb-3">
+                        Already have an account?
+                        <a href="@GetLoginUrl()">Back to login</a>.
+                    </p>
+
+                    @if (!string.IsNullOrWhiteSpace(_successMessage))
+                    {
+                        <div class="alert alert-success" role="alert">@_successMessage</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                    }
+
+                    <EditForm Model="_model" OnValidSubmit="OnRegisterSubmittedAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label" for="username">Username</label>
+                            <InputText id="username" class="form-control" @bind-Value="_model.Username" disabled="@_isSubmitting" />
+                            <ValidationMessage For="@(() => _model.Username)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="displayName">Display name</label>
+                            <InputText id="displayName" class="form-control" @bind-Value="_model.DisplayName" disabled="@_isSubmitting" />
+                            <ValidationMessage For="@(() => _model.DisplayName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="password">Password</label>
+                            <InputText id="password" type="password" class="form-control" @bind-Value="_model.Password" disabled="@_isSubmitting" />
+                            <ValidationMessage For="@(() => _model.Password)" />
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                                @(_isSubmitting ? "Creating account..." : "Register")
+                            </button>
+                            <a class="btn btn-outline-secondary" href="@GetLoginUrl()">Back to login</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private readonly RegisterFormModel _model = new();
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isSubmitting;
+
+    private async Task OnRegisterSubmittedAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var apiClient = HttpClientFactory.CreateClient("TaskHubApi");
+            var request = new RegistrationRequest(
+                _model.Username.Trim(),
+                _model.Password,
+                _model.DisplayName.Trim());
+
+            using var response = await apiClient.PostAsJsonAsync("/api/auth/register", request);
+            if (response.IsSuccessStatusCode)
+            {
+                _successMessage = "Account created. Redirecting to login...";
+                Navigation.NavigateTo(GetLoginUrl(_model.Username.Trim()), forceLoad: false);
+                return;
+            }
+
+            _errorMessage = await ResolveErrorMessageAsync(response);
+        }
+        catch
+        {
+            _errorMessage = "Unable to register right now. Please try again.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private string GetLoginUrl(string? username = null)
+    {
+        var queryParts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            queryParts.Add($"username={Uri.EscapeDataString(username)}");
+        }
+
+        if (IsSafeLocalReturnUrl(ReturnUrl))
+        {
+            queryParts.Add($"returnUrl={Uri.EscapeDataString(ReturnUrl!)}");
+        }
+
+        return queryParts.Count == 0
+            ? "/login"
+            : $"/login?{string.Join("&", queryParts)}";
+    }
+
+    private string GetReturnUrl()
+    {
+        if (!IsSafeLocalReturnUrl(ReturnUrl))
+        {
+            return "/task-board";
+        }
+
+        return ReturnUrl!;
+    }
+
+    private static bool IsSafeLocalReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl) || !returnUrl.StartsWith('/'))
+        {
+            return false;
+        }
+
+        if (returnUrl.StartsWith("//", StringComparison.Ordinal) || returnUrl.StartsWith("/\\", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(returnUrl, UriKind.RelativeOrAbsolute, out var parsedUri))
+        {
+            return false;
+        }
+
+        return !parsedUri.IsAbsoluteUri;
+    }
+
+    private static async Task<string> ResolveErrorMessageAsync(HttpResponseMessage response)
+    {
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            try
+            {
+                var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+                if (!string.IsNullOrWhiteSpace(problem?.Detail))
+                {
+                    return problem.Detail;
+                }
+            }
+            catch
+            {
+                // Fall through to generic fallback.
+            }
+        }
+
+        return "Unable to register right now. Please try again.";
+    }
+
+    private sealed class RegisterFormModel
+    {
+        [Required]
+        [StringLength(100)]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(200)]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+}

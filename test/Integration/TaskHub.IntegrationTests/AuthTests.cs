@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskList.Commands;
+using TaskHub.Contracts.Auth;
 using TaskHub.Contracts.Common;
 using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
@@ -15,6 +16,125 @@ namespace TaskHub.IntegrationTests;
 [Collection(nameof(IntegrationTestCollection))]
 public class AuthTests(IntegrationTestFixture fixture)
 {
+    [Fact]
+    public async Task Register_WithValidRequest_ShouldReturn200AndCreatedUser()
+    {
+        await fixture.ResetAsync();
+
+        using var client = fixture.ApiFactory.CreateClient();
+        var request = new RegistrationRequest(" Register-Success-User ", "RegisterPass123!", " Register Success User ");
+
+        var response = await client.PostAsJsonAsync("/api/auth/register", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var payload = await response.Content.ReadFromJsonAsync<RegistrationResponse>();
+
+        Assert.NotNull(payload);
+        Assert.NotEqual(Guid.Empty, payload!.UserId);
+        Assert.Equal("register-success-user", payload.Username);
+        Assert.Equal("Register Success User", payload.DisplayName);
+        Assert.Equal("User", payload.Role);
+    }
+
+    [Fact]
+    public async Task Register_WithDuplicateUsername_ShouldReturn400()
+    {
+        await fixture.ResetAsync();
+
+        using var client = fixture.ApiFactory.CreateClient();
+        var request = new RegistrationRequest("duplicate-user", "RegisterPass123!", "Duplicate User");
+
+        var firstResponse = await client.PostAsJsonAsync("/api/auth/register", request);
+        firstResponse.EnsureSuccessStatusCode();
+
+        var duplicateResponse = await client.PostAsJsonAsync("/api/auth/register", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Register_WithDuplicateUsernameDifferentCasing_ShouldReturn400()
+    {
+        await fixture.ResetAsync();
+
+        using var client = fixture.ApiFactory.CreateClient();
+
+        var firstResponse = await client.PostAsJsonAsync("/api/auth/register", new RegistrationRequest(
+            "Marcin",
+            "RegisterPass123!",
+            "Marcin"));
+        firstResponse.EnsureSuccessStatusCode();
+
+        var duplicateResponse = await client.PostAsJsonAsync("/api/auth/register", new RegistrationRequest(
+            "MARCIN",
+            "RegisterPass123!",
+            "Marcin Upper"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_WithRegisteredUserAndValidPassword_ShouldReturn200AndToken()
+    {
+        await fixture.ResetAsync();
+
+        using var client = fixture.ApiFactory.CreateClient();
+        var registrationRequest = new RegistrationRequest("login-success-user", "LoginPass123!", "Login Success User");
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", registrationRequest);
+        registerResponse.EnsureSuccessStatusCode();
+
+        var response = await client.PostAsJsonAsync("/api/auth/token", new TokenRequest(
+            registrationRequest.Username,
+            registrationRequest.Password));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var payload = await response.Content.ReadFromJsonAsync<TokenResponse>();
+
+        Assert.NotNull(payload);
+        Assert.False(string.IsNullOrWhiteSpace(payload!.AccessToken));
+    }
+
+    [Fact]
+    public async Task Login_WithRegisteredUserAndDifferentUsernameCasing_ShouldReturn200AndToken()
+    {
+        await fixture.ResetAsync();
+
+        using var client = fixture.ApiFactory.CreateClient();
+        var registrationRequest = new RegistrationRequest("Marcin", "LoginPass123!", "Marcin");
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", registrationRequest);
+        registerResponse.EnsureSuccessStatusCode();
+
+        var response = await client.PostAsJsonAsync("/api/auth/token", new TokenRequest(
+            "MARCIN",
+            registrationRequest.Password));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var payload = await response.Content.ReadFromJsonAsync<TokenResponse>();
+
+        Assert.NotNull(payload);
+        Assert.False(string.IsNullOrWhiteSpace(payload!.AccessToken));
+    }
+
+    [Fact]
+    public async Task Login_WithRegisteredUserAndInvalidPassword_ShouldReturn401()
+    {
+        await fixture.ResetAsync();
+
+        using var client = fixture.ApiFactory.CreateClient();
+        var registrationRequest = new RegistrationRequest("login-invalid-password-user", "LoginPass123!", "Login Invalid Password User");
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", registrationRequest);
+        registerResponse.EnsureSuccessStatusCode();
+
+        var response = await client.PostAsJsonAsync("/api/auth/token", new TokenRequest(
+            registrationRequest.Username,
+            "WrongPassword123!"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     [Fact]
     public async Task GetTaskLists_WithoutToken_ShouldReturn401()
     {

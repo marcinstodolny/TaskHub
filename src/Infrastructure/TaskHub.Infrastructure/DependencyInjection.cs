@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<ITaskItemCommandRepository, TaskItemCommandRepository>();
         services.AddScoped<ITaskListQueryRepository, TaskListQueryRepository>();
         services.AddScoped<ITaskListCommandRepository, TaskListCommandRepository>();
+        services.AddScoped<IUserCommandRepository, UserCommandRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();

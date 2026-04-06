@@ -32,6 +32,11 @@
                         Sign in with your TaskHub credentials to use the task board and authenticated API calls.
                     </p>
 
+                    <p class="small mb-3">
+                        Need an account?
+                        <a href="@GetRegisterUrl()">Create one here</a>.
+                    </p>
+
                     @if (!string.IsNullOrWhiteSpace(_errorMessage))
                     {
                         <div class="alert alert-danger" role="alert">@_errorMessage</div>
@@ -68,6 +73,9 @@
     [SupplyParameterFromQuery(Name = "returnUrl")]
     public string? ReturnUrl { get; set; }
 
+    [SupplyParameterFromQuery(Name = "username")]
+    public string? InitialUsername { get; set; }
+
     private readonly LoginFormModel _model = new();
     private string? _errorMessage;
     private bool _isSubmitting;
@@ -80,6 +88,14 @@
     public void Dispose()
     {
         AuthSession.StateChanged -= OnAuthStateChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(InitialUsername))
+        {
+            _model.Username = InitialUsername;
+        }
     }
 
     private async Task OnLoginSubmittedAsync()
@@ -126,6 +142,17 @@
         }
 
         return ReturnUrl!;
+    }
+
+    private string GetRegisterUrl()
+    {
+        var registerUrl = "/register";
+        if (!IsSafeLocalReturnUrl(ReturnUrl))
+        {
+            return registerUrl;
+        }
+
+        return $"{registerUrl}?returnUrl={Uri.EscapeDataString(ReturnUrl!)}";
     }
 
     private static bool IsSafeLocalReturnUrl(string? returnUrl)
