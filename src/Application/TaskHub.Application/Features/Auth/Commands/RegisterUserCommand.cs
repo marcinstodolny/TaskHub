@@ -21,17 +21,18 @@ public sealed class RegisterUserCommandHandler(
 
     public async Task<Result<RegistrationReadModel>> Handle(RegisterUserCommand request, CancellationToken ct)
     {
-        if (await userCommandRepository.ExistsByUsernameAsync(request.Username, ct))
+        var normalizedUsername = request.Username.Trim();
+        var normalizedDisplayName = string.IsNullOrWhiteSpace(request.DisplayName)
+            ? normalizedUsername
+            : request.DisplayName.Trim();
+
+        if (await userCommandRepository.ExistsByUsernameAsync(normalizedUsername, ct))
         {
-            return Result.Fail<RegistrationReadModel>($"User with username '{request.Username}' already exists.");
+            return Result.Fail<RegistrationReadModel>($"User with username '{normalizedUsername}' already exists.");
         }
 
-        var displayName = string.IsNullOrWhiteSpace(request.DisplayName)
-            ? request.Username
-            : request.DisplayName;
-
         var passwordHash = userPasswordHasher.HashPassword(request.Password);
-        var userResult = User.Create(request.Username, passwordHash, displayName, DefaultUserRole);
+        var userResult = User.Create(normalizedUsername, passwordHash, normalizedDisplayName, DefaultUserRole);
         if (userResult.IsFailed)
         {
             return Result.Fail<RegistrationReadModel>(userResult.Errors);
