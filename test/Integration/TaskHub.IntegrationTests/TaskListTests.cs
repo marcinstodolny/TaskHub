@@ -52,6 +52,45 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.Contains(getAllResult.Value.Items, list => list.Id == createListResult.Value.Id && list.Title == listTitle);
     }
 
+    [Fact]
+    public async Task GetById_WithExistingTasks_ShouldReturnChildTaskData()
+    {
+        await fixture.ResetAsync();
+
+        var createListResult = await fixture.SendAsync(new CreateTaskListCommand("List with tasks"));
+
+        var firstTaskResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "First child task",
+            "First child description",
+            TaskPriority.High));
+        var secondTaskResult = await fixture.SendAsync(new CreateTaskItemCommand(
+            createListResult.Value.Id,
+            "Second child task",
+            "Second child description",
+            TaskPriority.Normal));
+
+        var getResult = await fixture.SendAsync(new GetTaskListByIdQuery(createListResult.Value.Id));
+
+        Assert.True(firstTaskResult.IsSuccess);
+        Assert.True(secondTaskResult.IsSuccess);
+        Assert.True(getResult.IsSuccess);
+        Assert.NotEmpty(getResult.Value.Tasks);
+        Assert.Equal(2, getResult.Value.Tasks.Count);
+        Assert.Contains(getResult.Value.Tasks, task =>
+            task.Id == firstTaskResult.Value &&
+            task.TaskListId == createListResult.Value.Id &&
+            task.Title == "First child task" &&
+            task.Description == "First child description" &&
+            task.Priority == TaskPriority.High);
+        Assert.Contains(getResult.Value.Tasks, task =>
+            task.Id == secondTaskResult.Value &&
+            task.TaskListId == createListResult.Value.Id &&
+            task.Title == "Second child task" &&
+            task.Description == "Second child description" &&
+            task.Priority == TaskPriority.Normal);
+    }
+
 
     [Fact]
     public async Task GetAll_Api_ShouldIncludeTasksCount()
