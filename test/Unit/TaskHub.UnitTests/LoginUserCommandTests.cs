@@ -1,5 +1,5 @@
-using TaskHub.Application.abstraction;
-using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Abstractions;
+using TaskHub.Application.Abstractions.Repositories.Query;
 using TaskHub.Application.Features.Auth;
 using TaskHub.Application.Features.Auth.Commands;
 using TaskHub.Domain.Entities;

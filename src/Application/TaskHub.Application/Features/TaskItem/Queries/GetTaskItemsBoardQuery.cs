@@ -1,7 +1,7 @@
 using FluentValidation;
 using MediatR;
-using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Abstractions.Repositories.Command;
+using TaskHub.Application.Abstractions.Repositories.Query;
 using TaskHub.Application.Features.TaskItem.ReadModels;
 using TaskHub.Domain.Base;
 using TaskHub.Domain.Policies;

@@ -1,7 +1,7 @@
-﻿using TaskHub.Application.Common.Pagination;
+using TaskHub.Application.Common.Pagination;
 using TaskHub.Application.Features.TaskItem.ReadModels;
 
-namespace TaskHub.Application.abstraction.Repository.Query
+namespace TaskHub.Application.Abstractions.Repositories.Query
 {
     public interface ITaskItemQueryRepository
     {

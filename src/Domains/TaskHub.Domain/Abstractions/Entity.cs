@@ -1,4 +1,4 @@
-﻿namespace TaskHub.Domain.Abstraction
+namespace TaskHub.Domain.Abstractions
 {
     public abstract class Entity<TId>
     {

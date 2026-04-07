@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 using TaskHub.Infrastructure.Persistence;
 
 namespace TaskHub.Infrastructure.Authentication.Schema;

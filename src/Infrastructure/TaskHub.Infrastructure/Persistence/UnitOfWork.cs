@@ -1,6 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 using TaskHub.Application.Exceptions;
 
 namespace TaskHub.Infrastructure.Persistence

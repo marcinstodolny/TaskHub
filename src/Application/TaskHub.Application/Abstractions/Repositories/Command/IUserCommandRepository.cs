@@ -1,6 +1,6 @@
 using TaskHub.Domain.Entities;
 
-namespace TaskHub.Application.abstraction.Repository.Command
+namespace TaskHub.Application.Abstractions.Repositories.Command
 {
     public interface IUserCommandRepository
     {

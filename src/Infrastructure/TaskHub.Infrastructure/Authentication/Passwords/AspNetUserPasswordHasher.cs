@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Identity;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 
 namespace TaskHub.Infrastructure.Authentication.Passwords;
 

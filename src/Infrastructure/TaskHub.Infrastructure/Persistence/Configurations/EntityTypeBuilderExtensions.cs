@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TaskHub.Domain.Abstraction;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TaskHub.Domain.Abstractions;
 
 namespace TaskHub.Infrastructure.Persistence.Configurations
 {

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 using TaskHub.Application.Features.Auth;
 using TaskHub.Domain.Entities;
 using TaskHub.Infrastructure.Authentication.Options;

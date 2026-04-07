@@ -2,7 +2,7 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Domain.Base;
 
-namespace TaskHub.Application.Behavior;
+namespace TaskHub.Application.Behaviors;
 
 public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators)
     : IPipelineBehavior<TRequest, TResponse>

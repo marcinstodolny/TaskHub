@@ -1,4 +1,4 @@
-using TaskHub.Domain.Abstraction;
+using TaskHub.Domain.Abstractions;
 using TaskHub.Domain.Base;
 
 namespace TaskHub.Domain.Entities
