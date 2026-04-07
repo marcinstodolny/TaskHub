@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 
 namespace TaskHub.Api.Controllers;
 

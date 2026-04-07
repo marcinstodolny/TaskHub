@@ -2,7 +2,7 @@ using FluentValidation;
 using MediatR;
 using TaskHub.Application.Abstractions;
 using TaskHub.Application.Abstractions.Repositories.Command;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 

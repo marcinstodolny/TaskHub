@@ -3,7 +3,7 @@ using MediatR;
 using TaskHub.Application.Abstractions;
 using TaskHub.Application.Abstractions.Repositories.Command;
 using TaskHub.Application.Features.TaskList.ReadModels;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Features.TaskList.Commands;

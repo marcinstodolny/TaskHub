@@ -1,6 +1,6 @@
 using FluentValidation;
 using MediatR;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 
 namespace TaskHub.Application.Behaviors;
 

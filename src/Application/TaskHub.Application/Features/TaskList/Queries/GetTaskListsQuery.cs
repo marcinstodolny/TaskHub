@@ -3,7 +3,7 @@ using MediatR;
 using TaskHub.Application.Abstractions.Repositories.Query;
 using TaskHub.Application.Common.Pagination;
 using TaskHub.Application.Features.TaskList.ReadModels;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 
 namespace TaskHub.Application.Features.TaskList.Queries
 {

@@ -1,4 +1,4 @@
-﻿using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 
 namespace TaskHub.Domain.ValueObjects
 {

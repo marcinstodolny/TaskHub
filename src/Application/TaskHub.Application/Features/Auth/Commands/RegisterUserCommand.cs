@@ -5,7 +5,7 @@ using TaskHub.Application.Abstractions.Repositories.Command;
 using TaskHub.Application.Exceptions;
 using TaskHub.Application.Features.Auth;
 using TaskHub.Application.Features.Auth.ReadModels;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.Features.Auth.Commands;

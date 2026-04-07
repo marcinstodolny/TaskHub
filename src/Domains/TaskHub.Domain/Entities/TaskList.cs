@@ -1,5 +1,4 @@
-using TaskHub.Domain.Abstractions;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 

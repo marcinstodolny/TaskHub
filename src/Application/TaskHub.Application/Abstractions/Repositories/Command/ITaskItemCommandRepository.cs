@@ -1,4 +1,4 @@
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 using TaskHub.Domain.Entities;
 
 namespace TaskHub.Application.Abstractions.Repositories.Command
