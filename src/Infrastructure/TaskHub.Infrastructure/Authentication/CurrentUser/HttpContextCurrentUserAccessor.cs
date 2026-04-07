@@ -1,7 +1,8 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using TaskHub.Application.abstraction;
 
-namespace TaskHub.Api.Auth;
+namespace TaskHub.Infrastructure.Authentication.CurrentUser;
 
 public sealed class HttpContextCurrentUserAccessor(IHttpContextAccessor httpContextAccessor) : ICurrentUserAccessor
 {

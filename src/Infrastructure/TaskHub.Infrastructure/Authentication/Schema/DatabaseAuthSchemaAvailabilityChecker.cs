@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using TaskHub.Application.abstraction;
 using TaskHub.Infrastructure.Persistence;
 
-namespace TaskHub.Api.Auth;
+namespace TaskHub.Infrastructure.Authentication.Schema;
 
-public sealed class AuthSchemaAvailabilityChecker(TaskHubDbContext dbContext) : IAuthSchemaAvailabilityChecker
+public sealed class DatabaseAuthSchemaAvailabilityChecker(TaskHubDbContext dbContext) : IAuthSchemaAvailabilityChecker
 {
     public async Task<bool> IsUsersSchemaAvailableAsync(CancellationToken cancellationToken = default)
     {

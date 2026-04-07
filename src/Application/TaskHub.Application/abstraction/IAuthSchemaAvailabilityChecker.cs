@@ -1,4 +1,4 @@
-namespace TaskHub.Api.Auth;
+namespace TaskHub.Application.abstraction;
 
 public interface IAuthSchemaAvailabilityChecker
 {
