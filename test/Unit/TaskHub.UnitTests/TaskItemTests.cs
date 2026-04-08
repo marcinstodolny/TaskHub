@@ -1,5 +1,5 @@
-﻿using TaskHub.Domain;
 using TaskHub.Domain.Enums;
+using TaskHub.Domain.Events;
 using TaskHub.Domain.ValueObjects;
 using Xunit;
 using TaskItem = TaskHub.Domain.Entities.TaskItem;
@@ -10,6 +10,7 @@ namespace TaskHub.UnitTests
     public class TaskItemTests
     {
         private readonly TaskItem _taskItem;
+
         public TaskItemTests()
         {
             _taskItem = TaskItem.Create(Guid.NewGuid(), TaskItemTitle.Create("Test task").Value, null, TaskPriority.Normal).Value;
@@ -18,12 +19,9 @@ namespace TaskHub.UnitTests
         [Fact]
         public void Create_SetsDefaults_AndRaisesEvent()
         {
-            // Arrange
             var title = TaskItemTitle.Create("Manual Testing").Value;
-            // Act
             var result = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal);
 
-            // Assert
             Assert.True(result.IsSuccess);
             var task = result.Value;
             Assert.NotEqual(Guid.Empty, task.Id);
@@ -33,26 +31,20 @@ namespace TaskHub.UnitTests
         [Fact]
         public void Create_Fails_If_Title_Is_Null()
         {
-            // Arrange
             TaskItemTitle? title = null;
 
-            // Act
             var result = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal);
 
-            // Assert
             Assert.True(result.IsFailed);
         }
 
         [Fact]
         public void UpdateStatus_AlreadyCanceled_ShouldFail()
         {
-            // Arrange
             _taskItem.UpdateStatus(TaskStatus.Cancelled, DateTime.Now);
 
-            // Act
             var result = _taskItem.UpdateStatus(TaskStatus.Cancelled, DateTime.Now);
 
-            // Assert
             Assert.True(result.IsFailed);
             Assert.Equal(TaskStatus.Cancelled, _taskItem.Status);
         }
@@ -60,13 +52,10 @@ namespace TaskHub.UnitTests
         [Fact]
         public void UpdateStatus_AlreadyCompleted_ShouldFail()
         {
-            // Arrange
             _taskItem.UpdateStatus(TaskStatus.Done, DateTime.Now);
 
-            // Act
             var result = _taskItem.UpdateStatus(TaskStatus.Done, DateTime.Now);
 
-            // Assert
             Assert.True(result.IsFailed);
             Assert.Equal(TaskStatus.Done, _taskItem.Status);
         }
@@ -74,13 +63,10 @@ namespace TaskHub.UnitTests
         [Fact]
         public void UpdateStatus_AlreadyStarted_ShouldFail()
         {
-            // Arrange
             _taskItem.UpdateStatus(TaskStatus.InProgress, DateTime.Now);
 
-            // Act
             var result = _taskItem.UpdateStatus(TaskStatus.InProgress, DateTime.Now);
 
-            // Assert
             Assert.True(result.IsFailed);
             Assert.Equal(TaskStatus.InProgress, _taskItem.Status);
         }
@@ -88,16 +74,12 @@ namespace TaskHub.UnitTests
         [Fact]
         public void UpdateTitle_UpdatingTitle_AndRaisesEvent()
         {
-            // Arrange
             var title = TaskItemTitle.Create("Manual Testing").Value;
             var task = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal).Value;
-
             var newTitle = TaskItemTitle.Create("Different title").Value;
 
-            // Act
             var result = task.UpdateTitle(newTitle);
 
-            // Assert
             Assert.True(result.IsSuccess);
             Assert.Equal(newTitle, task.Title);
 
@@ -109,29 +91,22 @@ namespace TaskHub.UnitTests
         [Fact]
         public void UpdateTitle_Fails_If_Title_Is_Null()
         {
-            // Arrange
-
-            // Act
             var result = _taskItem.UpdateTitle(null);
 
-            // Assert
             Assert.True(result.IsFailed);
         }
 
         [Fact]
         public void UpdateDetails_UpdatesFieldsAndRaisesEvent()
         {
-            // Arrange
             var title = TaskItemTitle.Create("Manual Testing").Value;
             var task = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal).Value;
             var newTitle = TaskItemTitle.Create("Updated title").Value;
             var newDescription = TaskDescription.Create("Updated description").Value;
             var now = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
-            // Act
             var result = task.Update(newTitle, newDescription, TaskPriority.High, now);
 
-            // Assert
             Assert.True(result.IsSuccess);
             Assert.Equal(newTitle, task.Title);
             Assert.Equal(newDescription, task.Description);

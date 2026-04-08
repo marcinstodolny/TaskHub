@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 using TaskHub.Infrastructure.Authentication.Options;
 
 namespace TaskHub.Infrastructure.Authentication.AccessTokens;

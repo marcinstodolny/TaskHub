@@ -1,7 +1,7 @@
-﻿using FluentValidation;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using TaskHub.Application.Behavior;
+using TaskHub.Application.Behaviors;
 
 namespace TaskHub.Application;
 

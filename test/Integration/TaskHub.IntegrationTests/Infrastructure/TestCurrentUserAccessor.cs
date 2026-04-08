@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Threading;
 using Microsoft.AspNetCore.Http;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 
 namespace TaskHub.IntegrationTests.Infrastructure;
 

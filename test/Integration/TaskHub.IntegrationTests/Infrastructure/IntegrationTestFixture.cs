@@ -1,10 +1,10 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 using TaskHub.Contracts.Auth;
 using TaskHub.Domain.Entities;
 using TaskHub.Infrastructure.Authentication.Bootstrap;

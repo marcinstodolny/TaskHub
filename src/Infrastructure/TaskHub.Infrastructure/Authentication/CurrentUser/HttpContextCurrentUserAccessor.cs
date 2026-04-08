@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 
 namespace TaskHub.Infrastructure.Authentication.CurrentUser;
 

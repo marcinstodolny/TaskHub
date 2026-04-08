@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using TaskHub.Application.abstraction;
+using TaskHub.Application.Abstractions;
 
 namespace TaskHub.Api.Filters;
 

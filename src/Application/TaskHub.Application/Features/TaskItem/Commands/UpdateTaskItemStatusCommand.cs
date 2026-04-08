@@ -1,8 +1,8 @@
-﻿using FluentValidation;
+using FluentValidation;
 using MediatR;
-using TaskHub.Application.abstraction;
-using TaskHub.Application.abstraction.Repository.Command;
-using TaskHub.Domain.Base;
+using TaskHub.Application.Abstractions;
+using TaskHub.Application.Abstractions.Repositories.Command;
+using TaskHub.Domain.Common;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
 namespace TaskHub.Application.Features.TaskItem.Commands;

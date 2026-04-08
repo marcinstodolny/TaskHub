@@ -1,6 +1,6 @@
 using TaskHub.Domain.Entities;
 
-namespace TaskHub.Application.abstraction.Repository.Query;
+namespace TaskHub.Application.Abstractions.Repositories.Query;
 
 public interface IUserAuthenticationQueryRepository
 {

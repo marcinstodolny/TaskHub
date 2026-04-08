@@ -1,4 +1,4 @@
-namespace TaskHub.Application.abstraction;
+namespace TaskHub.Application.Abstractions;
 
 public interface IUserPasswordHasher
 {

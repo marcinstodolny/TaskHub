@@ -1,4 +1,4 @@
-﻿namespace TaskHub.Domain.Base;
+namespace TaskHub.Domain.Common;
 
 public class Result
 {
@@ -29,7 +29,9 @@ public class Result
     private static IReadOnlyCollection<string> NormalizeErrors(bool isSuccess, IReadOnlyCollection<string> errors)
     {
         if (!isSuccess)
+        {
             return errors?.Count > 0 ? errors.ToArray() : new[] { DefaultErrorMessage };
+        }
 
         return errors?.Count > 0
             ? throw new InvalidOperationException("A successful result cannot have errors.")

@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Abstractions.Repositories.Query;
 using TaskHub.Domain.Entities;
 using TaskHub.Infrastructure.Persistence;
 

@@ -1,8 +1,8 @@
 using MediatR;
-using TaskHub.Application.abstraction;
-using TaskHub.Application.abstraction.Repository.Query;
+using TaskHub.Application.Abstractions;
+using TaskHub.Application.Abstractions.Repositories.Query;
 using TaskHub.Application.Features.Auth.ReadModels;
-using TaskHub.Domain.Base;
+using TaskHub.Domain.Common;
 
 namespace TaskHub.Application.Features.Auth.Commands;
 
