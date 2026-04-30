@@ -58,6 +58,15 @@ You can run the project locally in two ways:
 
 Demo auth is intended only for local/demo environments (`Development` and `Testing`). The expected workflow is a fresh start on an empty database, where the app seeds the demo user automatically. Compatibility with JWTs issued by older local runs is intentionally not supported; after auth-related changes, log in again and start from a fresh local database if needed.
 
+### Demo login
+
+For a local portfolio/demo run, the app can seed a ready-to-use demo account automatically. The checked-in development appsettings and the default `.env.example` values use the same demo credentials:
+
+```text
+Username: DefaultUser
+Password: DefaultPassword123!
+```
+
 ```bash
 cp .env.example .env
 ```
