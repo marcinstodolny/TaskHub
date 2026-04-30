@@ -14,7 +14,7 @@ namespace TaskHub.Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.TaskListId).IsRequired();
             builder.Property(x => x.TaskItemId).IsRequired(false);
-            builder.Property(x => x.Type).HasConversion<string>().IsRequired();
+            builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(64).IsRequired();
             builder.Property(x => x.Message).HasMaxLength(TaskActivity.MaxMessageLength).IsRequired();
             builder.Property(x => x.CreatedAtUtc).IsRequired();
             builder.Property(x => x.TaskTitleSnapshot).HasMaxLength(TaskItemTitle.MaxLength).IsRequired(false);

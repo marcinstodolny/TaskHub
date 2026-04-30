@@ -18,7 +18,7 @@ namespace TaskHub.Infrastructure.Persistence.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     TaskListId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     TaskItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     Message = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     TaskTitleSnapshot = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
