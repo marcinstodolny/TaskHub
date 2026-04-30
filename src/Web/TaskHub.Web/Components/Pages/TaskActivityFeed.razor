@@ -125,7 +125,7 @@
             using var response = await AuthorizedRequestExecutor.SendAsync(
                 client => client.GetAsync($"/api/TaskList/{taskListId}/activities?page=1&count=50"));
 
-            if (!IsCurrentState(authStateVersion, taskListId))
+            if (!IsCurrentState(authStateVersion, taskListId, refreshVersion))
             {
                 return;
             }
@@ -138,7 +138,7 @@
             }
 
             var feed = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskActivityResponse>>(_serializerOptions);
-            if (!IsCurrentState(authStateVersion, taskListId))
+            if (!IsCurrentState(authStateVersion, taskListId, refreshVersion))
             {
                 return;
             }
@@ -149,7 +149,7 @@
         }
         catch
         {
-            if (IsCurrentState(authStateVersion, taskListId))
+            if (IsCurrentState(authStateVersion, taskListId, refreshVersion))
             {
                 _errorMessage = "Unable to load activity.";
                 _activities = [];
@@ -157,7 +157,7 @@
         }
         finally
         {
-            if (IsCurrentState(authStateVersion, taskListId))
+            if (IsCurrentState(authStateVersion, taskListId, refreshVersion))
             {
                 _isLoading = false;
             }
@@ -197,11 +197,12 @@
         }
     }
 
-    private bool IsCurrentState(int authStateVersion, Guid taskListId)
+    private bool IsCurrentState(int authStateVersion, Guid taskListId, int refreshVersion)
     {
         return authStateVersion == _authStateVersion
                && AuthSession.IsAuthenticated
-               && TaskListId == taskListId;
+               && TaskListId == taskListId
+               && RefreshVersion == refreshVersion;
     }
 
     private static string FormatTimestamp(DateTime createdAtUtc)
