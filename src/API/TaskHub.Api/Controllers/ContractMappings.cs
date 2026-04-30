@@ -1,7 +1,9 @@
+using TaskActivityReadModel = TaskHub.Application.Features.TaskActivity.ReadModels.TaskActivityReadModel;
 using TaskItemReadModel = TaskHub.Application.Features.TaskItem.ReadModels.TaskItemReadModel;
 using TaskListDetailsReadModel = TaskHub.Application.Features.TaskList.ReadModels.TaskListDetailsReadModel;
 using TaskListSummaryReadModel = TaskHub.Application.Features.TaskList.ReadModels.TaskListSummaryReadModel;
 using TaskHub.Contracts.Common;
+using TaskHub.Contracts.TaskActivity;
 using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
 
@@ -9,6 +11,17 @@ namespace TaskHub.Api.Controllers;
 
 internal static class ContractMappings
 {
+    public static TaskActivityResponse ToContract(this TaskActivityReadModel source) => new()
+    {
+        Id = source.Id,
+        TaskListId = source.TaskListId,
+        TaskItemId = source.TaskItemId,
+        Type = source.Type,
+        Message = source.Message,
+        CreatedAtUtc = source.CreatedAtUtc,
+        TaskTitleSnapshot = source.TaskTitleSnapshot
+    };
+
     public static TaskCardResponse ToContract(this TaskItemReadModel source) => new()
     {
         Id = source.Id,
