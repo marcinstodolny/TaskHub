@@ -10,7 +10,12 @@ namespace TaskHub.Application.Features.TaskItem.Commands
 {
     public sealed record CreateTaskItemCommand(Guid TaskListId, string Title, string? Description, TaskPriority Priority) : IRequest<Result<Guid>>;
 
-    public sealed class CreateTaskItemHandler(IUnitOfWork unitOfWork, ITaskListCommandRepository taskListCommandRepository, ITaskItemCommandRepository taskItemCommandRepository) : IRequestHandler<CreateTaskItemCommand, Result<Guid>>
+    public sealed class CreateTaskItemHandler(
+        IUnitOfWork unitOfWork,
+        ITaskListCommandRepository taskListCommandRepository,
+        ITaskItemCommandRepository taskItemCommandRepository,
+        ITaskActivityCommandRepository taskActivityCommandRepository,
+        IDateTimeProvider dateTimeProvider) : IRequestHandler<CreateTaskItemCommand, Result<Guid>>
     {
         public async Task<Result<Guid>> Handle(CreateTaskItemCommand request, CancellationToken ct)
         {
@@ -38,6 +43,20 @@ namespace TaskHub.Application.Features.TaskItem.Commands
             }
 
             await taskItemCommandRepository.AddAsync(createResult.Value, ct);
+
+            var activityResult = Domain.Entities.TaskActivity.Create(
+                createResult.Value.TaskListId,
+                createResult.Value.Id,
+                TaskActivityType.TaskCreated,
+                $"Created task \"{createResult.Value.Title.Value}\"",
+                dateTimeProvider.UtcNow(),
+                createResult.Value.Title.Value);
+            if (activityResult.IsFailed)
+            {
+                return Result.Fail<Guid>(activityResult.Errors);
+            }
+
+            await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
             return Result.Success(createResult.Value.Id);

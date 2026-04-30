@@ -3,6 +3,7 @@ using MediatR;
 using TaskHub.Application.Abstractions;
 using TaskHub.Application.Abstractions.Repositories.Command;
 using TaskHub.Domain.Common;
+using TaskHub.Domain.Enums;
 
 namespace TaskHub.Application.Features.TaskItem.Commands;
 
@@ -10,7 +11,9 @@ public sealed record DeleteTaskItemCommand(Guid TaskItemId) : IRequest<Result>;
 
 public sealed class DeleteTaskItemCommandHandler(
     IUnitOfWork unitOfWork,
-    ITaskItemCommandRepository taskItemCommandRepository)
+    ITaskItemCommandRepository taskItemCommandRepository,
+    ITaskActivityCommandRepository taskActivityCommandRepository,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<DeleteTaskItemCommand, Result>
 {
     public async Task<Result> Handle(DeleteTaskItemCommand request, CancellationToken ct)
@@ -21,7 +24,24 @@ public sealed class DeleteTaskItemCommandHandler(
             return Result.Fail(getResult.Errors);
         }
 
-        taskItemCommandRepository.Remove(getResult.Value);
+        var task = getResult.Value;
+        var taskTitle = task.Title.Value;
+
+        taskItemCommandRepository.Remove(task);
+
+        var activityResult = Domain.Entities.TaskActivity.Create(
+            task.TaskListId,
+            task.Id,
+            TaskActivityType.TaskDeleted,
+            $"Deleted task \"{taskTitle}\"",
+            dateTimeProvider.UtcNow(),
+            taskTitle);
+        if (activityResult.IsFailed)
+        {
+            return Result.Fail(activityResult.Errors);
+        }
+
+        await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
         await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Success();
