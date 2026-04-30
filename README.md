@@ -13,13 +13,14 @@ TaskHub is a focused engineering portfolio project that shows how a task managem
 - Layered architecture across Domain, Application, Infrastructure, API, Web, and WPF projects
 - Shared request and response contracts via `TaskHub.Contracts`
 - Hybrid persistence with EF Core for transactional writes and Dapper for read-side queries and projections
+- Task-list activity feed that records task/list actions and exposes them through the API and Blazor UI
 - Local development with Docker Compose and SQL Server
 - Integration testing with Testcontainers, with Respawn available for database reset support
 - FluentValidation wired into the MediatR pipeline
 
 ## Current state
 
-TaskHub currently includes working task list and task item endpoints, shared request and response contracts, domain entities and value objects, infrastructure for persistence, a Blazor UI with working pages, and unit and integration test projects. The backend structure is already in place and the web client is usable for demonstrating the flow through the system. The WPF client is intentionally at an earlier stage and should be read as a scaffold for further desktop development rather than a feature-complete application.
+TaskHub currently includes working task list and task item endpoints, shared request and response contracts, domain entities and value objects, infrastructure for persistence, a Blazor UI with working pages, and unit and integration test projects. Task list and task item changes are also recorded in a task-list activity feed, available through `GET /api/TaskList/{taskListId}/activities` and displayed in the Blazor task board for the selected list. The backend structure is already in place and the web client is usable for demonstrating the flow through the system. The WPF client is intentionally at an earlier stage and should be read as a scaffold for further desktop development rather than a feature-complete application.
 
 ## Architecture foundations
 
