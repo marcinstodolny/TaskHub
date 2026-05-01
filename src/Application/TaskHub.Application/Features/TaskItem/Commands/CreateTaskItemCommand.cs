@@ -15,6 +15,7 @@ namespace TaskHub.Application.Features.TaskItem.Commands
         ITaskListCommandRepository taskListCommandRepository,
         ITaskItemCommandRepository taskItemCommandRepository,
         ITaskActivityCommandRepository taskActivityCommandRepository,
+        ITaskActivityNotifier taskActivityNotifier,
         IDateTimeProvider dateTimeProvider) : IRequestHandler<CreateTaskItemCommand, Result<Guid>>
     {
         public async Task<Result<Guid>> Handle(CreateTaskItemCommand request, CancellationToken ct)
@@ -59,6 +60,7 @@ namespace TaskHub.Application.Features.TaskItem.Commands
             await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
+            await taskActivityNotifier.NotifyTaskListActivityChangedAsync(createResult.Value.TaskListId, ct);
             return Result.Success(createResult.Value.Id);
         }
     }
