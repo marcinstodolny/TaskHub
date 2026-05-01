@@ -20,11 +20,12 @@ public class TaskActivityNotificationTests
     public async Task CreateTaskList_WhenSuccessful_ShouldNotifyAfterSaveWithCreatedTaskListId()
     {
         var unitOfWork = new FakeUnitOfWork();
-        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted);
+        var activityRepository = new RecordingTaskActivityCommandRepository();
+        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted, () => activityRepository.Activities.Count);
         var handler = new CreateTaskListCommandHandler(
             unitOfWork,
             new FakeTaskListCommandRepository(),
-            new RecordingTaskActivityCommandRepository(),
+            activityRepository,
             new FakeCurrentUserAccessor(UserId),
             notifier,
             new FakeDateTimeProvider());
@@ -36,15 +37,37 @@ public class TaskActivityNotificationTests
     }
 
     [Fact]
+    public async Task CreateTaskList_WhenRequestIsCancelledAfterSave_ShouldStillReturnSuccess()
+    {
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var unitOfWork = new FakeUnitOfWork(afterSave: cancellationTokenSource.Cancel);
+        var activityRepository = new RecordingTaskActivityCommandRepository();
+        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted, () => activityRepository.Activities.Count);
+        var handler = new CreateTaskListCommandHandler(
+            unitOfWork,
+            new FakeTaskListCommandRepository(),
+            activityRepository,
+            new FakeCurrentUserAccessor(UserId),
+            notifier,
+            new FakeDateTimeProvider());
+
+        var result = await handler.Handle(new CreateTaskListCommand("Planning"), cancellationTokenSource.Token);
+
+        Assert.True(result.IsSuccess);
+        AssertSingleNotification(notifier, result.Value.Id);
+    }
+
+    [Fact]
     public async Task UpdateTaskList_WhenSuccessful_ShouldNotifyAfterSaveWithTaskListId()
     {
         var taskList = CreateTaskList();
         var unitOfWork = new FakeUnitOfWork();
-        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted);
+        var activityRepository = new RecordingTaskActivityCommandRepository();
+        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted, () => activityRepository.Activities.Count);
         var handler = new UpdateTaskListCommandHandler(
             unitOfWork,
             new FakeTaskListCommandRepository(taskList),
-            new RecordingTaskActivityCommandRepository(),
+            activityRepository,
             notifier,
             new FakeDateTimeProvider());
 
@@ -59,12 +82,13 @@ public class TaskActivityNotificationTests
     {
         var taskList = CreateTaskList();
         var unitOfWork = new FakeUnitOfWork();
-        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted);
+        var activityRepository = new RecordingTaskActivityCommandRepository();
+        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted, () => activityRepository.Activities.Count);
         var handler = new CreateTaskItemHandler(
             unitOfWork,
             new FakeTaskListCommandRepository(taskList),
             new FakeTaskItemCommandRepository(),
-            new RecordingTaskActivityCommandRepository(),
+            activityRepository,
             notifier,
             new FakeDateTimeProvider());
 
@@ -82,11 +106,12 @@ public class TaskActivityNotificationTests
         var taskList = CreateTaskList();
         var taskItem = CreateTaskItem(taskList.Id);
         var unitOfWork = new FakeUnitOfWork();
-        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted);
+        var activityRepository = new RecordingTaskActivityCommandRepository();
+        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted, () => activityRepository.Activities.Count);
         var handler = new UpdateTaskItemCommandHandler(
             unitOfWork,
             new FakeTaskItemCommandRepository(taskItem),
-            new RecordingTaskActivityCommandRepository(),
+            activityRepository,
             notifier,
             new FakeDateTimeProvider());
 
@@ -104,11 +129,12 @@ public class TaskActivityNotificationTests
         var taskList = CreateTaskList();
         var taskItem = CreateTaskItem(taskList.Id);
         var unitOfWork = new FakeUnitOfWork();
-        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted);
+        var activityRepository = new RecordingTaskActivityCommandRepository();
+        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted, () => activityRepository.Activities.Count);
         var handler = new UpdateTaskItemStatusCommandHandler(
             unitOfWork,
             new FakeTaskItemCommandRepository(taskItem),
-            new RecordingTaskActivityCommandRepository(),
+            activityRepository,
             notifier,
             new FakeDateTimeProvider());
 
@@ -126,11 +152,12 @@ public class TaskActivityNotificationTests
         var taskList = CreateTaskList();
         var taskItem = CreateTaskItem(taskList.Id);
         var unitOfWork = new FakeUnitOfWork();
-        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted);
+        var activityRepository = new RecordingTaskActivityCommandRepository();
+        var notifier = new RecordingTaskActivityNotifier(() => unitOfWork.SaveCompleted, () => activityRepository.Activities.Count);
         var handler = new DeleteTaskItemCommandHandler(
             unitOfWork,
             new FakeTaskItemCommandRepository(taskItem),
-            new RecordingTaskActivityCommandRepository(),
+            activityRepository,
             notifier,
             new FakeDateTimeProvider());
 
@@ -186,6 +213,8 @@ public class TaskActivityNotificationTests
         var notification = Assert.Single(notifier.Notifications);
         Assert.Equal(expectedTaskListId, notification.TaskListId);
         Assert.True(notification.SaveCompleted);
+        Assert.Equal(1, notification.ActivityCount);
+        Assert.Equal(CancellationToken.None, notification.CancellationToken);
     }
 
     private static TaskList CreateTaskList()
@@ -200,7 +229,7 @@ public class TaskActivityNotificationTests
         return TaskItem.Create(taskListId, title, null, TaskPriority.Normal).Value;
     }
 
-    private sealed class FakeUnitOfWork(bool throwOnSave = false) : IUnitOfWork
+    private sealed class FakeUnitOfWork(bool throwOnSave = false, Action? afterSave = null) : IUnitOfWork
     {
         public bool SaveCompleted { get; private set; }
 
@@ -212,6 +241,7 @@ public class TaskActivityNotificationTests
             }
 
             SaveCompleted = true;
+            afterSave?.Invoke();
             return Task.FromResult(1);
         }
     }
@@ -269,13 +299,15 @@ public class TaskActivityNotificationTests
         }
     }
 
-    private sealed class RecordingTaskActivityNotifier(Func<bool> saveCompleted) : ITaskActivityNotifier
+    private sealed class RecordingTaskActivityNotifier(
+        Func<bool> saveCompleted,
+        Func<int>? activityCount = null) : ITaskActivityNotifier
     {
-        public List<(Guid TaskListId, bool SaveCompleted)> Notifications { get; } = [];
+        public List<(Guid TaskListId, bool SaveCompleted, int ActivityCount, CancellationToken CancellationToken)> Notifications { get; } = [];
 
         public Task NotifyTaskListActivityChangedAsync(Guid taskListId, CancellationToken ct)
         {
-            Notifications.Add((taskListId, saveCompleted()));
+            Notifications.Add((taskListId, saveCompleted(), activityCount?.Invoke() ?? 0, ct));
             return Task.CompletedTask;
         }
     }

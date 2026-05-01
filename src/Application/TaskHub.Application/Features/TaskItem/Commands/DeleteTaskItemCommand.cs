@@ -44,7 +44,7 @@ public sealed class DeleteTaskItemCommandHandler(
 
         await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
         await unitOfWork.SaveChangesAsync(ct);
-        await taskActivityNotifier.NotifyTaskListActivityChangedAsync(task.TaskListId, ct);
+        await taskActivityNotifier.NotifyTaskListActivityChangedAsync(task.TaskListId, CancellationToken.None);
 
         return Result.Success();
     }

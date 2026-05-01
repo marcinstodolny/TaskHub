@@ -54,7 +54,7 @@ namespace TaskHub.Application.Features.TaskList.Commands
             await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
-            await taskActivityNotifier.NotifyTaskListActivityChangedAsync(taskList.Value.Id, ct);
+            await taskActivityNotifier.NotifyTaskListActivityChangedAsync(taskList.Value.Id, CancellationToken.None);
             return Result.Success(new TaskListSummaryReadModel() { Id = taskList.Value.Id, Title = taskList.Value.Title.Value });
         }
     }

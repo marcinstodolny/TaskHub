@@ -55,7 +55,7 @@ public sealed class UpdateTaskListCommandHandler(
         await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
         await unitOfWork.SaveChangesAsync(ct);
-        await taskActivityNotifier.NotifyTaskListActivityChangedAsync(taskList.Id, ct);
+        await taskActivityNotifier.NotifyTaskListActivityChangedAsync(taskList.Id, CancellationToken.None);
 
         return Result.Success(new TaskListSummaryReadModel { Id = taskList.Id, Title = taskList.Title.Value });
     }

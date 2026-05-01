@@ -60,7 +60,7 @@ namespace TaskHub.Application.Features.TaskItem.Commands
             await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
-            await taskActivityNotifier.NotifyTaskListActivityChangedAsync(createResult.Value.TaskListId, ct);
+            await taskActivityNotifier.NotifyTaskListActivityChangedAsync(createResult.Value.TaskListId, CancellationToken.None);
             return Result.Success(createResult.Value.Id);
         }
     }
