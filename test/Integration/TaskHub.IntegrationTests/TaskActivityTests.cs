@@ -1,10 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using TaskHub.Contracts.Common;
 using TaskHub.Contracts.TaskActivity;
 using TaskHub.Contracts.TaskItem;
 using TaskHub.Contracts.TaskList;
 using TaskHub.Domain.Enums;
+using TaskHub.Infrastructure.Persistence;
 using TaskHub.IntegrationTests.Infrastructure;
 using Xunit;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
@@ -105,8 +108,9 @@ public class TaskActivityTests(IntegrationTestFixture fixture)
         using var client = await fixture.CreateAuthorizedClientAsync();
         var taskList = await CreateTaskListAsync(client, "Activity ordering list");
         await CreateTaskItemAsync(client, taskList.Id, "Older task");
-        await Task.Delay(20);
         await CreateTaskItemAsync(client, taskList.Id, "Newer task");
+        await SetActivityCreatedAtAsync(taskList.Id, "Created task \"Older task\"", new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc));
+        await SetActivityCreatedAtAsync(taskList.Id, "Created task \"Newer task\"", new DateTime(2026, 1, 1, 10, 1, 0, DateTimeKind.Utc));
 
         var feed = await GetActivityFeedAsync(client, taskList.Id);
 
@@ -187,5 +191,16 @@ public class TaskActivityTests(IntegrationTestFixture fixture)
         var payload = await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskActivityResponse>>();
         Assert.NotNull(payload);
         return payload!;
+    }
+
+    private async Task SetActivityCreatedAtAsync(Guid taskListId, string message, DateTime createdAtUtc)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<TaskHubDbContext>();
+
+        var updatedRows = await db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE task_activities SET CreatedAtUtc = {createdAtUtc} WHERE TaskListId = {taskListId} AND Message = {message}");
+
+        Assert.Equal(1, updatedRows);
     }
 }

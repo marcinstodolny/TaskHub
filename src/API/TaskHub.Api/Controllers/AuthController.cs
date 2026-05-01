@@ -16,17 +16,24 @@ public sealed class AuthController(
 {
     [HttpPost("register")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(RegistrationResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegistrationRequest request, CancellationToken cancellationToken)
     {
         var result = await sender.Send(new RegisterUserCommand(request.Username, request.Password, request.DisplayName), cancellationToken);
 
         return result.IsFailed
             ? this.ToProblem(result, StatusCodes.Status400BadRequest, "Unable to register user")
-            : Ok(new RegistrationResponse(result.Value.UserId, result.Value.Username, result.Value.DisplayName, result.Value.Role));
+            : StatusCode(
+                StatusCodes.Status201Created,
+                new RegistrationResponse(result.Value.UserId, result.Value.Username, result.Value.DisplayName, result.Value.Role));
     }
 
     [HttpPost("token")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(TokenResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TokenResponse>> CreateToken([FromBody] TokenRequest request, CancellationToken cancellationToken)
     {
         var result = await sender.Send(new LoginUserCommand(request.Username, request.Password), cancellationToken);

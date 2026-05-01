@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using TaskHub.Application.Features.TaskItem.Commands;
 using TaskHub.Application.Features.TaskList.Commands;
@@ -133,6 +134,42 @@ public class TaskListTests(IntegrationTestFixture fixture)
         Assert.True(secondListPayload.TasksCount >= 0);
         Assert.Equal(1, firstListPayload.TasksCount);
         Assert.Equal(0, secondListPayload.TasksCount);
+    }
+
+    [Fact]
+    public async Task Create_Endpoint_ShouldReturnCreatedWithPayloadAndLocation()
+    {
+        await fixture.ResetAsync();
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("Created endpoint list"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        var payload = await response.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(payload);
+        Assert.NotEqual(Guid.Empty, payload!.Id);
+        Assert.Equal("Created endpoint list", payload.Title);
+        Assert.EndsWith($"/api/TaskList/{payload.Id}", response.Headers.Location!.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Create_Endpoint_InvalidTitle_ShouldReturnProblemDetails()
+    {
+        await fixture.ResetAsync();
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest(string.Empty));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Unable to create task list", problem!.Title);
+        Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
     }
 
     [Fact]
@@ -285,6 +322,23 @@ public class TaskListTests(IntegrationTestFixture fixture)
         var response = await client.DeleteAsync($"/api/TaskList/{createResult.Value.Id}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_ExistingTaskList_Endpoint_ShouldReturnNoContent()
+    {
+        await fixture.ResetAsync();
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var createResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("Endpoint delete list"));
+        createResponse.EnsureSuccessStatusCode();
+
+        var payload = await createResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(payload);
+
+        var response = await client.DeleteAsync($"/api/TaskList/{payload!.Id}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     [Fact]
