@@ -1,7 +1,9 @@
 using Microsoft.OpenApi;
 using TaskHub.Api.Filters;
 using TaskHub.Api.Hubs;
+using TaskHub.Api.Notifications;
 using TaskHub.Application;
+using TaskHub.Application.Abstractions;
 using TaskHub.Infrastructure;
 using TaskHub.Infrastructure.Hosting;
 
@@ -48,6 +50,7 @@ public class Program
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
         builder.Services.AddScoped<RequireAuthSchemaAvailableFilter>();
+        builder.Services.AddScoped<ITaskActivityNotifier, SignalRTaskActivityNotifier>();
         builder.Services.AddAuthorization();
 
         var app = builder.Build();
