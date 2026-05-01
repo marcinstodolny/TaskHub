@@ -10,6 +10,10 @@ var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? "https://localh
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services
+    .AddOptions<DemoAuthOptions>()
+    .BindConfiguration(DemoAuthOptions.SectionName);
+
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<AuthSession>();
 builder.Services.AddScoped<AuthorizedApiClientFactory>();
