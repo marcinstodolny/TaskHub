@@ -11,9 +11,12 @@ namespace TaskHub.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public class TaskItemController(IMediator mediator) : ControllerBase
     {
         [HttpGet("{taskItemId:guid}")]
+        [ProducesResponseType(typeof(TaskCardResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<TaskCardResponse>> GetTaskItemById(Guid taskItemId, CancellationToken ct)
         {
             var taskItemResult = await mediator.Send(new GetTaskItemByIdQuery(taskItemId), ct);
@@ -24,6 +27,8 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(PaginatedResponse<TaskItemLightResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<PaginatedResponse<TaskItemLightResponse>>> GetTaskItems([FromQuery] GetTaskItemsQuery query, CancellationToken ct)
         {
             var taskItemsResult = await mediator.Send(query, ct);
@@ -34,6 +39,9 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpGet("board/{taskListId:guid}")]
+        [ProducesResponseType(typeof(IReadOnlyCollection<TaskCardResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<IReadOnlyCollection<TaskCardResponse>>> GetTaskItemsBoard(Guid taskListId, CancellationToken ct)
         {
             var result = await mediator.Send(new GetTaskItemsBoardQuery(taskListId), ct);
@@ -44,6 +52,9 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Guid>> CreateTaskItem([FromBody] CreateTaskItemRequest request, CancellationToken ct)
         {
             var task = await mediator.Send(new CreateTaskItemCommand(request.TaskListId, request.Title, request.Description, request.Priority), ct);
@@ -51,14 +62,17 @@ namespace TaskHub.Api.Controllers
 
             return task.IsFailed
                 ? this.ToProblem(task, statusCode, "Unable to create task item")
-                : Ok(task.Value);
+                : CreatedAtAction(nameof(GetTaskItemById), new { taskItemId = task.Value }, task.Value);
         }
 
         [HttpPost("{taskItemId:guid}/status")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateTaskStatus(Guid taskItemId, [FromBody] UpdateTaskStatusRequest request, CancellationToken ct)
         {
             var result = await mediator.Send(new UpdateTaskItemStatusCommand(taskItemId, request.Status), ct);
-            if (result.IsSuccess) return Ok();
+            if (result.IsSuccess) return NoContent();
 
             var statusCode = result.Errors.Any(error => error.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 ? StatusCodes.Status404NotFound
@@ -69,6 +83,9 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpPut("{taskItemId:guid}")]
+        [ProducesResponseType(typeof(TaskCardResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<TaskCardResponse>> UpdateTaskItem(Guid taskItemId, [FromBody] UpdateTaskItemRequest request, CancellationToken ct)
         {
             var result = await mediator.Send(new UpdateTaskItemCommand(taskItemId, request.Title, request.Description, request.Priority), ct);
@@ -79,13 +96,16 @@ namespace TaskHub.Api.Controllers
         }
 
         [HttpDelete("{taskItemId:guid}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteTaskItem(Guid taskItemId, CancellationToken ct)
         {
             var result = await mediator.Send(new DeleteTaskItemCommand(taskItemId), ct);
             var statusCode = result.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
             return result.IsFailed
                 ? this.ToProblem(result, statusCode, "Unable to delete task item")
-                : Ok();
+                : NoContent();
         }
     }
 }

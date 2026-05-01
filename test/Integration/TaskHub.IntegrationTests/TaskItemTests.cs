@@ -278,6 +278,53 @@ public class TaskItemTests(IntegrationTestFixture fixture)
         Assert.Contains(response.Value.Items, list => list.Id == secondItemResult.Value);
     }
 
+    [Fact]
+    public async Task Create_Endpoint_ShouldReturnCreatedWithTaskIdAndLocation()
+    {
+        await fixture.ResetAsync();
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var createListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("List for create item endpoint"));
+        createListResponse.EnsureSuccessStatusCode();
+
+        var createdList = await createListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(createdList);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(createdList!.Id, "Created endpoint task", "Description", TaskPriority.Normal));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        var createdTaskId = await response.Content.ReadFromJsonAsync<Guid>();
+        Assert.NotEqual(Guid.Empty, createdTaskId);
+        Assert.EndsWith($"/api/TaskItem/{createdTaskId}", response.Headers.Location!.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Create_Endpoint_InvalidTitle_ShouldReturnProblemDetails()
+    {
+        await fixture.ResetAsync();
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var createListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("List for invalid item create"));
+        createListResponse.EnsureSuccessStatusCode();
+
+        var createdList = await createListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(createdList);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(createdList!.Id, string.Empty, "Description", TaskPriority.Normal));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Unable to create task item", problem!.Title);
+        Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
+    }
 
     [Fact]
     public async Task UpdateStatus_Endpoint_DisallowedTransition_ShouldReturnProblemDetails()
@@ -363,13 +410,13 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             $"/api/TaskItem/{createdTaskId}/status",
             new { Status = TaskStatus.Done });
 
-        Assert.Equal(HttpStatusCode.OK, moveToDoneResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, moveToDoneResponse.StatusCode);
 
         var reopenResponse = await client.PostAsJsonAsync(
             $"/api/TaskItem/{createdTaskId}/status",
             new { Status = TaskStatus.InProgress });
 
-        Assert.Equal(HttpStatusCode.OK, reopenResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, reopenResponse.StatusCode);
 
         var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createdTaskId}");
 
@@ -400,12 +447,36 @@ public class TaskItemTests(IntegrationTestFixture fixture)
             $"/api/TaskItem/{createdTaskId}/status",
             new { Status = TaskStatus.InProgress });
 
-        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, updateResponse.StatusCode);
 
         var getResponse = await client.GetFromJsonAsync<TaskCardResponse>($"/api/TaskItem/{createdTaskId}");
 
         Assert.NotNull(getResponse);
         Assert.Equal(TaskStatus.InProgress, getResponse.Status);
+    }
+
+    [Fact]
+    public async Task Delete_Endpoint_ExistingTaskItem_ShouldReturnNoContent()
+    {
+        await fixture.ResetAsync();
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var createListResponse = await client.PostAsJsonAsync("/api/TaskList", new CreateTaskListRequest("List for delete item endpoint"));
+        createListResponse.EnsureSuccessStatusCode();
+
+        var createdList = await createListResponse.Content.ReadFromJsonAsync<TaskListLightResponse>();
+        Assert.NotNull(createdList);
+
+        var createItemResponse = await client.PostAsJsonAsync(
+            "/api/TaskItem",
+            new CreateTaskItemRequest(createdList!.Id, "Task to delete", "Description", TaskPriority.Normal));
+        createItemResponse.EnsureSuccessStatusCode();
+
+        var createdTaskId = await createItemResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var response = await client.DeleteAsync($"/api/TaskItem/{createdTaskId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     [Fact]

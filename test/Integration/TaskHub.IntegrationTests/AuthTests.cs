@@ -17,7 +17,7 @@ namespace TaskHub.IntegrationTests;
 public class AuthTests(IntegrationTestFixture fixture)
 {
     [Fact]
-    public async Task Register_WithValidRequest_ShouldReturn200AndCreatedUser()
+    public async Task Register_WithValidRequest_ShouldReturn201AndCreatedUser()
     {
         await fixture.ResetAsync();
 
@@ -26,7 +26,7 @@ public class AuthTests(IntegrationTestFixture fixture)
 
         var response = await client.PostAsJsonAsync("/api/auth/register", request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var payload = await response.Content.ReadFromJsonAsync<RegistrationResponse>();
 
