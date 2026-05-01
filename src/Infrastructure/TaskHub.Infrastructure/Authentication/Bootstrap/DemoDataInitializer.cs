@@ -93,8 +93,7 @@ public sealed class DemoDataInitializer(
 
         foreach (var listSeed in DemoTaskLists)
         {
-            var taskList = existingLists.SingleOrDefault(x =>
-                string.Equals(x.Title.Value, listSeed.Title, StringComparison.Ordinal));
+            var taskList = ResolveExistingTaskList(existingLists, listSeed.Title, user.Id);
             var taskListWasCreated = false;
 
             if (taskList is null)
@@ -120,8 +119,7 @@ public sealed class DemoDataInitializer(
 
             foreach (var taskSeed in listSeed.Tasks)
             {
-                var task = taskList.Tasks.SingleOrDefault(x =>
-                    string.Equals(x.Title.Value, taskSeed.Title, StringComparison.Ordinal));
+                var task = ResolveExistingTask(taskList, taskSeed.Title);
                 var taskWasCreated = false;
 
                 if (task is null)
@@ -183,6 +181,48 @@ public sealed class DemoDataInitializer(
                 seededTaskCount,
                 seededActivityCount);
         }
+    }
+
+    private TaskList? ResolveExistingTaskList(IReadOnlyCollection<TaskList> existingLists, string title, Guid userId)
+    {
+        var matches = existingLists
+            .Where(x => string.Equals(x.Title.Value, title, StringComparison.Ordinal))
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .ToList();
+
+        if (matches.Count > 1)
+        {
+            logger.LogWarning(
+                "Found {TaskListCount} demo task lists titled '{Title}' for user '{UserId}'. Using task list '{TaskListId}' as the demo seed anchor and leaving duplicates untouched.",
+                matches.Count,
+                title,
+                userId,
+                matches[0].Id);
+        }
+
+        return matches.FirstOrDefault();
+    }
+
+    private TaskItem? ResolveExistingTask(TaskList taskList, string title)
+    {
+        var matches = taskList.Tasks
+            .Where(x => string.Equals(x.Title.Value, title, StringComparison.Ordinal))
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .ToList();
+
+        if (matches.Count > 1)
+        {
+            logger.LogWarning(
+                "Found {TaskCount} demo tasks titled '{Title}' in task list '{TaskListId}'. Using task '{TaskId}' as the demo seed anchor and leaving duplicates untouched.",
+                matches.Count,
+                title,
+                taskList.Id,
+                matches[0].Id);
+        }
+
+        return matches.FirstOrDefault();
     }
 
     private async Task<User?> FindDemoUserAsync(DemoAuthOptions options, CancellationToken cancellationToken)

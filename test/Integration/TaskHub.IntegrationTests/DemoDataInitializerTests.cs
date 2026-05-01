@@ -102,6 +102,65 @@ public sealed class DemoDataInitializerTests(IntegrationTestFixture fixture)
         matchingTasks.Single().Status.Should().Be(TaskStatus.Todo);
     }
 
+    [Fact]
+    public async Task EnsureDemoDataAsync_WhenDuplicateSeedTitlesExist_ShouldUseOneAnchorAndLeaveDuplicatesUntouched()
+    {
+        await fixture.ResetAsync();
+        await SeedDuplicateDemoListAndTaskTitlesAsync();
+
+        var act = RunDemoDataInitializerAsync;
+
+        await act.Should().NotThrowAsync();
+
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TaskHubDbContext>();
+        var demoUserId = await GetDemoUserIdAsync(scope.ServiceProvider);
+
+        var productLaunchLists = await dbContext.TaskLists
+            .AsNoTracking()
+            .Where(x => x.UserId == demoUserId && x.Title.Value == "Product Launch")
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .ToListAsync();
+
+        productLaunchLists.Should().HaveCount(2);
+
+        var seedAnchorListId = productLaunchLists[0].Id;
+        var untouchedDuplicateListId = productLaunchLists[1].Id;
+
+        var duplicateSeedTasks = await dbContext.TaskItems
+            .AsNoTracking()
+            .Where(x => x.TaskListId == seedAnchorListId && x.Title.Value == "Prepare API contract polish")
+            .ToListAsync();
+
+        duplicateSeedTasks.Should().HaveCount(2);
+        duplicateSeedTasks.Should().OnlyContain(x => x.Priority == TaskPriority.Low && x.Status == TaskStatus.Todo);
+
+        var addedTaskInAnchor = await dbContext.TaskItems
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TaskListId == seedAnchorListId && x.Title.Value == "Update README demo flow");
+
+        addedTaskInAnchor.Should().NotBeNull();
+
+        var untouchedDuplicateListTasks = await dbContext.TaskItems
+            .AsNoTracking()
+            .Where(x => x.TaskListId == untouchedDuplicateListId)
+            .ToListAsync();
+
+        untouchedDuplicateListTasks.Should().ContainSingle();
+        untouchedDuplicateListTasks.Single().Title.Value.Should().Be("Keep duplicate list untouched");
+
+        var engineeringImprovementsExists = await dbContext.TaskLists
+            .AsNoTracking()
+            .AnyAsync(x => x.UserId == demoUserId && x.Title.Value == "Engineering Improvements");
+        var portfolioDemoExists = await dbContext.TaskLists
+            .AsNoTracking()
+            .AnyAsync(x => x.UserId == demoUserId && x.Title.Value == "Portfolio Demo");
+
+        engineeringImprovementsExists.Should().BeTrue();
+        portfolioDemoExists.Should().BeTrue();
+    }
+
     private async Task RunDemoDataInitializerAsync()
     {
         await using var scope = fixture.Services.CreateAsyncScope();
@@ -166,6 +225,32 @@ public sealed class DemoDataInitializerTests(IntegrationTestFixture fixture)
         taskList.AddTask(taskTitle, taskDescription, TaskPriority.Low);
 
         await dbContext.TaskLists.AddAsync(taskList);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task SeedDuplicateDemoListAndTaskTitlesAsync()
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TaskHubDbContext>();
+        var demoUserId = await GetDemoUserIdAsync(scope.ServiceProvider);
+
+        var firstList = TaskList.Create(TaskListTitle.Create("Product Launch").Value, demoUserId).Value;
+        firstList.AddTask(
+            TaskItemTitle.Create("Prepare API contract polish").Value,
+            TaskDescription.Create("Existing duplicate seed task A.").Value,
+            TaskPriority.Low);
+        firstList.AddTask(
+            TaskItemTitle.Create("Prepare API contract polish").Value,
+            TaskDescription.Create("Existing duplicate seed task B.").Value,
+            TaskPriority.Low);
+
+        var secondList = TaskList.Create(TaskListTitle.Create("Product Launch").Value, demoUserId).Value;
+        secondList.AddTask(
+            TaskItemTitle.Create("Keep duplicate list untouched").Value,
+            TaskDescription.Create("This user-created duplicate list should not be modified.").Value,
+            TaskPriority.Critical);
+
+        await dbContext.TaskLists.AddRangeAsync(firstList, secondList);
         await dbContext.SaveChangesAsync();
     }
 
