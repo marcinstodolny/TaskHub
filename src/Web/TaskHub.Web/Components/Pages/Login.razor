@@ -3,9 +3,12 @@
 @implements IDisposable
 @using System.ComponentModel.DataAnnotations
 @using System.Text.Json
+@using Microsoft.Extensions.Options
 @using TaskHub.Web.Auth
 @inject AuthSession AuthSession
 @inject NavigationManager Navigation
+@inject IOptions<DemoAuthOptions> DemoAuthOptionsAccessor
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Environment
 
 <PageTitle>Login</PageTitle>
 
@@ -40,6 +43,23 @@
                     @if (!string.IsNullOrWhiteSpace(_errorMessage))
                     {
                         <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                    }
+
+                    @if (ShouldShowDemoAccountHelper)
+                    {
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                                <div>
+                                    <div class="fw-semibold">Demo account</div>
+                                    <div class="small text-muted">
+                                        Username: <span class="font-monospace">@DemoAuthOptions.Username</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="UseDemoCredentials" disabled="@_isSubmitting">
+                                    Use demo credentials
+                                </button>
+                            </div>
+                        </div>
                     }
 
                     <EditForm Model="_model" OnValidSubmit="OnLoginSubmittedAsync">
@@ -79,6 +99,13 @@
     private readonly LoginFormModel _model = new();
     private string? _errorMessage;
     private bool _isSubmitting;
+    private DemoAuthOptions DemoAuthOptions => DemoAuthOptionsAccessor.Value;
+
+    private bool ShouldShowDemoAccountHelper =>
+        Environment.IsDevelopment()
+        && DemoAuthOptions.Enabled
+        && !string.IsNullOrWhiteSpace(DemoAuthOptions.Username)
+        && !string.IsNullOrWhiteSpace(DemoAuthOptions.Password);
 
     protected override void OnInitialized()
     {
@@ -127,6 +154,13 @@
     private async Task OnLogoutClickedAsync()
     {
         await AuthSession.LogoutAsync();
+    }
+
+    private void UseDemoCredentials()
+    {
+        _model.Username = DemoAuthOptions.Username;
+        _model.Password = DemoAuthOptions.Password;
+        _errorMessage = null;
     }
 
     private void OnAuthStateChanged()

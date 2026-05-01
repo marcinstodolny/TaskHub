@@ -50,7 +50,7 @@ TaskHub is intended to show practical .NET engineering skills that are useful in
 ## What is currently implemented
 
 - User registration and login with JWT access tokens.
-- Demo user seeding for local portfolio runs.
+- Demo user and demo task data seeding for local portfolio runs.
 - Task list CRUD endpoints and Blazor UI flows.
 - Task item CRUD endpoints and Blazor UI flows.
 - Task status transitions with domain-level transition rules.
@@ -103,7 +103,9 @@ You can run the project locally in two ways:
 - Run the API and Web projects directly from an IDE or via `dotnet run`. The checked-in development appsettings provide local JWT and demo-auth values, and the launch profiles provide the local environment and application URLs.
 - Run the full stack with Docker Compose.
 
-Demo auth is intended only for local/demo environments (`Development` and `Testing`). The expected workflow is a fresh start on an empty database, where the app seeds the demo user automatically. Compatibility with JWTs issued by older local runs is intentionally not supported; after auth-related changes, log in again and start from a fresh local database if needed.
+Demo auth is intended only for local/demo environments (`Development` and `Testing`). When `DemoAuth:Enabled` is `true`, the API startup path seeds the configured demo user and a small portfolio-friendly task dataset for that user. The demo data seed is idempotent: it can run multiple times without duplicating the seeded lists, tasks, or activities, and it does not delete or overwrite user-created data.
+
+Compatibility with JWTs issued by older local runs is intentionally not supported; after auth-related changes, log in again and start from a fresh local database if needed.
 
 ### Demo login
 
@@ -113,6 +115,8 @@ For a local portfolio/demo run, the app can seed a ready-to-use demo account aut
 Username: DefaultUser
 Password: DefaultPassword123!
 ```
+
+In Development, the Blazor login page shows a small demo account helper when Web-side `DemoAuth` is enabled. The helper shows the configured username and provides a `Use demo credentials` button that fills the login form. It does not auto-login.
 
 Before starting Docker Compose, create `.env` from `.env.example`:
 
@@ -126,7 +130,7 @@ On PowerShell:
 Copy-Item .env.example .env
 ```
 
-The example file contains local development values for Docker Compose. They are intended only for local development. If you need different credentials or JWT settings, change them in `.env` before starting the stack.
+The example file contains local development values for Docker Compose. They are intended only for local development. If you need different credentials or JWT settings, change them in `.env` before starting the stack. Docker Compose maps the same demo credential environment variables into both the API and Web containers so the seeded account and login helper stay aligned.
 
 Start the full stack with Docker Compose:
 
@@ -161,7 +165,7 @@ docker compose up --build
 http://localhost:5262
 ```
 
-3. Sign in with the demo account:
+3. On the login page, click `Use demo credentials`, then submit the login form. You can also type the configured demo account manually:
 
 ```text
 Username: DefaultUser
@@ -169,17 +173,18 @@ Password: DefaultPassword123!
 ```
 
 4. Open the Task Board.
-5. Create a task list.
-6. Add a task with a title, description, and priority.
-7. Move the task through the available statuses.
-8. Review the activity feed for the selected task list. To demonstrate live updates, open the task board in a second browser session, select the same list, and create or move a task in the first session.
-9. Inspect the API through Swagger at:
+5. Inspect the pre-seeded task lists, including `Product Launch`, `Engineering Improvements`, and `Portfolio Demo`.
+6. Select a pre-seeded list and review its tasks across different statuses and priorities.
+7. Review the activity feed for the selected task list. It is pre-populated from the demo seed and continues to record new list/task changes.
+8. Create or update a task, then move it through the available statuses.
+9. To demonstrate SignalR live updates, open the task board in a second browser session, sign in with the same demo account, select the same task list, and create or move a task in the first session. The selected list's activity feed should refresh in the other session.
+10. Inspect the API through Swagger at:
 
 ```text
 http://localhost:8080/swagger
 ```
 
-10. Run the automated test suite:
+11. Run the automated test suite:
 
 ```bash
 dotnet test

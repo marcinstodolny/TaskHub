@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddSingleton<IAccessTokenGenerator, JwtAccessTokenGenerator>();
         services.AddScoped<IAuthSchemaAvailabilityChecker, DatabaseAuthSchemaAvailabilityChecker>();
         services.AddScoped<DemoUserInitializer>();
+        services.AddScoped<DemoDataInitializer>();
 
         services
             .AddOptions<JwtOptions>()

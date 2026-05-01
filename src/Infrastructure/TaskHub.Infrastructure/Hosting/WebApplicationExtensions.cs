@@ -26,6 +26,7 @@ public static class WebApplicationExtensions
         var dbContext = scope.ServiceProvider.GetRequiredService<TaskHubDbContext>();
         var migrator = dbContext.GetService<IMigrator>();
         var demoUserInitializer = scope.ServiceProvider.GetRequiredService<DemoUserInitializer>();
+        var demoDataInitializer = scope.ServiceProvider.GetRequiredService<DemoDataInitializer>();
 
         const int maxAttempts = 10;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
@@ -50,6 +51,7 @@ public static class WebApplicationExtensions
                 }
 
                 dbContext.Database.Migrate();
+                demoDataInitializer.EnsureDemoDataAsync().GetAwaiter().GetResult();
                 logger.LogInformation("Migrations applied.");
                 break;
             }
