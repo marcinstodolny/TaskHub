@@ -8,11 +8,13 @@ namespace TaskHub.Infrastructure.Persistence
     {
         public DbSet<TaskList> TaskLists => Set<TaskList>();
         public DbSet<TaskItem> TaskItems => Set<TaskItem>();
+        public DbSet<TaskActivity> TaskActivities => Set<TaskActivity>();
         public DbSet<User> Users => Set<User>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new TaskItemConfiguration());
+            modelBuilder.ApplyConfiguration(new TaskActivityConfiguration());
             modelBuilder.ApplyConfiguration(new TaskListConfiguration());
             modelBuilder.ApplyConfiguration(new UserConfiguration());
         }

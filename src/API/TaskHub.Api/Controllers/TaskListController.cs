@@ -1,9 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TaskHub.Application.Features.TaskActivity.Queries;
 using TaskHub.Application.Features.TaskList.Commands;
 using TaskHub.Application.Features.TaskList.Queries;
 using TaskHub.Contracts.Common;
+using TaskHub.Contracts.TaskActivity;
 using TaskHub.Contracts.TaskList;
 
 namespace TaskHub.Api.Controllers
@@ -31,6 +33,21 @@ namespace TaskHub.Api.Controllers
             return taskListsResult.IsFailed
                 ? this.ToProblem(taskListsResult, StatusCodes.Status404NotFound, "Task lists not found")
                 : Ok(taskListsResult.Value.Map(list => list.ToContract()));
+        }
+
+        [HttpGet("{taskListId:guid}/activities")]
+        public async Task<ActionResult<PaginatedResponse<TaskActivityResponse>>> GetTaskListActivities(
+            Guid taskListId,
+            [FromQuery] int page = 1,
+            [FromQuery] int count = 50,
+            CancellationToken ct = default)
+        {
+            var result = await mediator.Send(new GetTaskListActivityFeedQuery(taskListId, page, count), ct);
+            var statusCode = result.IsNotFoundError() ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest;
+
+            return result.IsFailed
+                ? this.ToProblem(result, statusCode, "Unable to load task activity feed")
+                : Ok(result.Value.Map(activity => activity.ToContract()));
         }
 
         [HttpPost]

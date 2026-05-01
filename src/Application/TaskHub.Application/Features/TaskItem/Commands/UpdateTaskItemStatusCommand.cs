@@ -3,6 +3,7 @@ using MediatR;
 using TaskHub.Application.Abstractions;
 using TaskHub.Application.Abstractions.Repositories.Command;
 using TaskHub.Domain.Common;
+using TaskHub.Domain.Enums;
 using TaskStatus = TaskHub.Domain.Enums.TaskStatus;
 
 namespace TaskHub.Application.Features.TaskItem.Commands;
@@ -12,6 +13,7 @@ public sealed record UpdateTaskItemStatusCommand(Guid TaskItemId, TaskStatus Sta
 public sealed class UpdateTaskItemStatusCommandHandler(
     IUnitOfWork unitOfWork,
     ITaskItemCommandRepository taskItemCommandRepository,
+    ITaskActivityCommandRepository taskActivityCommandRepository,
     IDateTimeProvider dateTimeProvider)
     : IRequestHandler<UpdateTaskItemStatusCommand, Result>
 {
@@ -24,12 +26,27 @@ public sealed class UpdateTaskItemStatusCommandHandler(
         }
 
         var task = getResult.Value;
+        var previousStatus = task.Status;
         var updateResult = task.UpdateStatus(request.Status, dateTimeProvider.UtcNow());
 
         if (updateResult.IsFailed)
         {
             return updateResult;
         }
+
+        var activityResult = Domain.Entities.TaskActivity.Create(
+            task.TaskListId,
+            task.Id,
+            TaskActivityType.TaskStatusChanged,
+            $"Moved task \"{task.Title.Value}\" from {previousStatus} to {task.Status}",
+            dateTimeProvider.UtcNow(),
+            task.Title.Value);
+        if (activityResult.IsFailed)
+        {
+            return Result.Fail(activityResult.Errors);
+        }
+
+        await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
         await unitOfWork.SaveChangesAsync(ct);
         return Result.Success();

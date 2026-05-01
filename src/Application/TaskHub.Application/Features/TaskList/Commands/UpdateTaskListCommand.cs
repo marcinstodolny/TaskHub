@@ -4,6 +4,7 @@ using TaskHub.Application.Abstractions;
 using TaskHub.Application.Abstractions.Repositories.Command;
 using TaskHub.Application.Features.TaskList.ReadModels;
 using TaskHub.Domain.Common;
+using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Features.TaskList.Commands;
@@ -12,7 +13,9 @@ public sealed record UpdateTaskListCommand(Guid TaskListId, string Title) : IReq
 
 public sealed class UpdateTaskListCommandHandler(
     IUnitOfWork unitOfWork,
-    ITaskListCommandRepository taskListCommandRepository)
+    ITaskListCommandRepository taskListCommandRepository,
+    ITaskActivityCommandRepository taskActivityCommandRepository,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<UpdateTaskListCommand, Result<TaskListSummaryReadModel>>
 {
     public async Task<Result<TaskListSummaryReadModel>> Handle(UpdateTaskListCommand request, CancellationToken ct)
@@ -30,11 +33,25 @@ public sealed class UpdateTaskListCommandHandler(
         }
 
         var taskList = getResult.Value;
+        var previousTitle = taskList.Title.Value;
         var renameResult = taskList.Rename(titleResult.Value);
         if (renameResult.IsFailed)
         {
             return Result.Fail<TaskListSummaryReadModel>(renameResult.Errors);
         }
+
+        var activityResult = Domain.Entities.TaskActivity.Create(
+            taskList.Id,
+            null,
+            TaskActivityType.TaskListRenamed,
+            $"Renamed task list from \"{previousTitle}\" to \"{taskList.Title.Value}\"",
+            dateTimeProvider.UtcNow());
+        if (activityResult.IsFailed)
+        {
+            return Result.Fail<TaskListSummaryReadModel>(activityResult.Errors);
+        }
+
+        await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
         await unitOfWork.SaveChangesAsync(ct);
 

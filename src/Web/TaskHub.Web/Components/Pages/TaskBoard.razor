@@ -181,6 +181,8 @@ else
                 </section>
             }
         </div>
+
+        <TaskActivityFeed TaskListId="@_selectedTaskListId" RefreshVersion="@_activityFeedRefreshVersion" />
     }
 }
 
@@ -220,6 +222,7 @@ else
     private bool _isSubmittingTask;
     private bool _isDeletingTaskList;
     private int _authStateVersion;
+    private int _activityFeedRefreshVersion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -279,6 +282,7 @@ else
         _isSubmittingTaskList = false;
         _isSubmittingTask = false;
         _isDeletingTaskList = false;
+        _activityFeedRefreshVersion++;
         _taskListForm.Title = string.Empty;
         _taskForm.Title = string.Empty;
         _taskForm.Description = string.Empty;
@@ -474,6 +478,7 @@ else
 
                 CancelTaskListForm();
                 await LoadTaskListsAsync();
+                RefreshActivityFeed();
             }
         }
         catch
@@ -516,6 +521,7 @@ else
             CancelTaskListForm();
             CancelTaskEdit();
             _selectedTaskListId = null;
+            RefreshActivityFeed();
             await LoadTaskListsAsync();
             _selectedTaskListId ??= _taskLists.FirstOrDefault()?.Id;
             await LoadBoardAsync();
@@ -588,6 +594,7 @@ else
 
                 CancelTaskEdit();
                 await LoadBoardAsync();
+                RefreshActivityFeed();
             }
         }
         catch
@@ -624,6 +631,7 @@ else
             }
 
             await LoadBoardAsync();
+            RefreshActivityFeed();
         }
         catch
         {
@@ -668,6 +676,7 @@ else
             }
 
             await LoadBoardAsync();
+            RefreshActivityFeed();
         }
         catch
         {
@@ -703,6 +712,11 @@ else
     };
 
     private static string GetCountCssClass(TaskStatus status) => GetStatusCssClass(status);
+
+    private void RefreshActivityFeed()
+    {
+        _activityFeedRefreshVersion++;
+    }
 
     private async Task<HttpResponseMessage> SendAuthorizedAsync(Func<HttpClient, Task<HttpResponseMessage>> request)
     {

@@ -4,6 +4,7 @@ using TaskHub.Application.Abstractions;
 using TaskHub.Application.Abstractions.Repositories.Command;
 using TaskHub.Application.Features.TaskItem.ReadModels;
 using TaskHub.Domain.Common;
+using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 using TaskPriority = TaskHub.Domain.Enums.TaskPriority;
 
@@ -18,6 +19,7 @@ public sealed record UpdateTaskItemCommand(
 public sealed class UpdateTaskItemCommandHandler(
     IUnitOfWork unitOfWork,
     ITaskItemCommandRepository taskItemCommandRepository,
+    ITaskActivityCommandRepository taskActivityCommandRepository,
     IDateTimeProvider dateTimeProvider)
     : IRequestHandler<UpdateTaskItemCommand, Result<TaskItemReadModel>>
 {
@@ -53,6 +55,20 @@ public sealed class UpdateTaskItemCommandHandler(
         {
             return Result.Fail<TaskItemReadModel>(updateResult.Errors);
         }
+
+        var activityResult = Domain.Entities.TaskActivity.Create(
+            taskItem.TaskListId,
+            taskItem.Id,
+            TaskActivityType.TaskUpdated,
+            $"Updated task \"{taskItem.Title.Value}\"",
+            dateTimeProvider.UtcNow(),
+            taskItem.Title.Value);
+        if (activityResult.IsFailed)
+        {
+            return Result.Fail<TaskItemReadModel>(activityResult.Errors);
+        }
+
+        await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
         await unitOfWork.SaveChangesAsync(ct);
 

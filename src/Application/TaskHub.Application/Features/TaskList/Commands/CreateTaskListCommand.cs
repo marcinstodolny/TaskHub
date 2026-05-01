@@ -4,6 +4,7 @@ using TaskHub.Application.Abstractions;
 using TaskHub.Application.Abstractions.Repositories.Command;
 using TaskHub.Application.Features.TaskList.ReadModels;
 using TaskHub.Domain.Common;
+using TaskHub.Domain.Enums;
 using TaskHub.Domain.ValueObjects;
 
 namespace TaskHub.Application.Features.TaskList.Commands
@@ -13,7 +14,9 @@ namespace TaskHub.Application.Features.TaskList.Commands
     public sealed class CreateTaskListCommandHandler(
         IUnitOfWork unitOfWork,
         ITaskListCommandRepository taskListCommandRepository,
-        ICurrentUserAccessor currentUserAccessor) : IRequestHandler<CreateTaskListCommand, Result<TaskListSummaryReadModel>>
+        ITaskActivityCommandRepository taskActivityCommandRepository,
+        ICurrentUserAccessor currentUserAccessor,
+        IDateTimeProvider dateTimeProvider) : IRequestHandler<CreateTaskListCommand, Result<TaskListSummaryReadModel>>
     {
         public async Task<Result<TaskListSummaryReadModel>> Handle(CreateTaskListCommand request, CancellationToken ct)
         {
@@ -35,6 +38,19 @@ namespace TaskHub.Application.Features.TaskList.Commands
                 return Result.Fail<TaskListSummaryReadModel>(taskList.Errors);
             }
             await taskListCommandRepository.AddAsync(taskList.Value, ct);
+
+            var activityResult = Domain.Entities.TaskActivity.Create(
+                taskList.Value.Id,
+                null,
+                TaskActivityType.TaskListCreated,
+                $"Created task list \"{taskList.Value.Title.Value}\"",
+                dateTimeProvider.UtcNow());
+            if (activityResult.IsFailed)
+            {
+                return Result.Fail<TaskListSummaryReadModel>(activityResult.Errors);
+            }
+
+            await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
             await unitOfWork.SaveChangesAsync(ct);
             return Result.Success(new TaskListSummaryReadModel() { Id = taskList.Value.Id, Title = taskList.Value.Title.Value });
