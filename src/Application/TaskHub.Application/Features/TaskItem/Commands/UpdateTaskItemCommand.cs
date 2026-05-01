@@ -20,6 +20,7 @@ public sealed class UpdateTaskItemCommandHandler(
     IUnitOfWork unitOfWork,
     ITaskItemCommandRepository taskItemCommandRepository,
     ITaskActivityCommandRepository taskActivityCommandRepository,
+    ITaskActivityNotifier taskActivityNotifier,
     IDateTimeProvider dateTimeProvider)
     : IRequestHandler<UpdateTaskItemCommand, Result<TaskItemReadModel>>
 {
@@ -71,6 +72,7 @@ public sealed class UpdateTaskItemCommandHandler(
         await taskActivityCommandRepository.AddAsync(activityResult.Value, ct);
 
         await unitOfWork.SaveChangesAsync(ct);
+        await taskActivityNotifier.NotifyTaskListActivityChangedAsync(taskItem.TaskListId, CancellationToken.None);
 
         return Result.Success(new TaskItemReadModel
         {

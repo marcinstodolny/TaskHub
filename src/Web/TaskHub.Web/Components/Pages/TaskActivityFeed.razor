@@ -1,10 +1,12 @@
-@implements IDisposable
+@implements IAsyncDisposable
 @using System.Text.Json
+@using Microsoft.AspNetCore.SignalR.Client
 @using TaskHub.Contracts.Common
 @using TaskHub.Contracts.TaskActivity
 @using TaskHub.Web.Auth
 @inject AuthSession AuthSession
 @inject AuthorizedRequestExecutor AuthorizedRequestExecutor
+@inject IConfiguration Configuration
 
 <section class="activity-panel mt-3">
     <header class="activity-panel-header">
@@ -55,6 +57,9 @@
     private bool _isLoading;
     private int _loadedRefreshVersion = -1;
     private int _authStateVersion;
+    private HubConnection? _hubConnection;
+    private Guid? _joinedTaskListId;
+    private bool _isDisposed;
 
     protected override void OnInitialized()
     {
@@ -65,9 +70,12 @@
     {
         if (!AuthSession.IsAuthenticated || TaskListId is null)
         {
+            await LeaveTaskListGroupAsync();
             ResetFeed();
             return;
         }
+
+        await EnsureLiveActivitySubscriptionAsync();
 
         if (_loadedTaskListId == TaskListId && _loadedRefreshVersion == RefreshVersion)
         {
@@ -82,9 +90,11 @@
         await LoadActivitiesAsync();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        _isDisposed = true;
         AuthSession.StateChanged -= OnAuthStateChanged;
+        await DisposeHubConnectionAsync();
     }
 
     private void OnAuthStateChanged()
@@ -95,14 +105,149 @@
     private async Task HandleAuthStateChangedAsync()
     {
         _authStateVersion++;
+        await DisposeHubConnectionAsync();
         ResetFeed();
 
         if (AuthSession.IsAuthenticated && TaskListId is not null)
         {
+            await EnsureLiveActivitySubscriptionAsync();
             await LoadActivitiesAsync();
         }
 
         StateHasChanged();
+    }
+
+    private async Task EnsureLiveActivitySubscriptionAsync()
+    {
+        if (_isDisposed || !AuthSession.IsAuthenticated || TaskListId is null)
+        {
+            await LeaveTaskListGroupAsync();
+            return;
+        }
+
+        EnsureHubConnection();
+
+        if (_hubConnection is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_hubConnection.State == HubConnectionState.Disconnected)
+            {
+                await _hubConnection.StartAsync();
+            }
+
+            if (_hubConnection.State != HubConnectionState.Connected)
+            {
+                return;
+            }
+
+            var taskListId = TaskListId.Value;
+            if (_joinedTaskListId == taskListId)
+            {
+                return;
+            }
+
+            await LeaveTaskListGroupAsync();
+            await _hubConnection.InvokeAsync("JoinTaskListGroup", taskListId);
+            _joinedTaskListId = taskListId;
+        }
+        catch
+        {
+            _joinedTaskListId = null;
+        }
+    }
+
+    private void EnsureHubConnection()
+    {
+        if (_hubConnection is not null)
+        {
+            return;
+        }
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(GetHubUrl(), options =>
+            {
+                options.AccessTokenProvider = async () => await AuthSession.GetRequiredAccessTokenAsync();
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<Guid>("TaskListActivityChanged", taskListId =>
+        {
+            _ = InvokeAsync(() => HandleTaskListActivityChangedAsync(taskListId));
+        });
+
+        _hubConnection.Reconnected += _ =>
+            InvokeAsync(async () =>
+            {
+                _joinedTaskListId = null;
+                await EnsureLiveActivitySubscriptionAsync();
+            });
+
+        _hubConnection.Closed += _ =>
+        {
+            _joinedTaskListId = null;
+            return Task.CompletedTask;
+        };
+    }
+
+    private string GetHubUrl()
+    {
+        var apiBaseAddress = Configuration["Api:BaseAddress"] ?? "https://localhost:7040";
+        var baseUri = new Uri(apiBaseAddress.TrimEnd('/') + "/");
+        return new Uri(baseUri, "hubs/task-activity").ToString();
+    }
+
+    private async Task LeaveTaskListGroupAsync()
+    {
+        if (_hubConnection?.State == HubConnectionState.Connected && _joinedTaskListId is not null)
+        {
+            try
+            {
+                await _hubConnection.InvokeAsync("LeaveTaskListGroup", _joinedTaskListId.Value);
+            }
+            catch
+            {
+                // The feed still works through HTTP polling/manual refresh when live updates are unavailable.
+            }
+        }
+
+        _joinedTaskListId = null;
+    }
+
+    private async Task HandleTaskListActivityChangedAsync(Guid taskListId)
+    {
+        if (_isDisposed || !AuthSession.IsAuthenticated || TaskListId != taskListId)
+        {
+            return;
+        }
+
+        await LoadActivitiesAsync();
+        StateHasChanged();
+    }
+
+    private async ValueTask DisposeHubConnectionAsync()
+    {
+        var connection = _hubConnection;
+        _hubConnection = null;
+        _joinedTaskListId = null;
+
+        if (connection is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await connection.DisposeAsync();
+        }
+        catch
+        {
+            // Component disposal should not fail because a live-update connection is already closed.
+        }
     }
 
     private async Task LoadActivitiesAsync()

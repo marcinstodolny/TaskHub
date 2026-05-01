@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\API\TaskHub.Api\TaskHub.Api.csproj" />
     <ProjectReference Include="..\..\..\src\Application\TaskHub.Application\TaskHub.Application.csproj" />
     <ProjectReference Include="..\..\..\src\Domains\TaskHub.Domain\TaskHub.Domain.csproj" />
   </ItemGroup>

@@ -15,11 +15,12 @@ The current portfolio demo covers:
 - SQL Server persistence through EF Core command-side writes and Dapper read-side projections.
 - MediatR/CQRS-style application layer with FluentValidation pipeline behavior.
 - JWT-based authentication with per-user ownership checks.
+- SignalR live refresh for the selected task-list activity feed.
 - Docker Compose local environment with SQL Server.
 - Unit and integration tests, including API/database flows with Testcontainers.
 - Swagger/OpenAPI for manual API inspection.
 
-The active demo does not currently include SignalR live updates, Snowflake integration, or a feature-complete WPF desktop client.
+The active demo does not currently include Snowflake integration or a feature-complete WPF desktop client.
 
 ## What this project demonstrates
 
@@ -30,7 +31,7 @@ TaskHub is a focused engineering portfolio project that shows how a task managem
 - Layered architecture across Domain, Application, Infrastructure, API, Web, and test projects.
 - Shared request and response contracts via `TaskHub.Contracts`.
 - Hybrid persistence with EF Core for transactional writes and Dapper for read-side queries and projections.
-- Task-list activity feed that records task/list actions and exposes them through the API and Blazor UI.
+- Task-list activity feed that records task/list actions, exposes them through the API and Blazor UI, and refreshes live through SignalR for the selected list.
 - Local development with Docker Compose and SQL Server.
 - Integration testing with Testcontainers, with Respawn available for database reset support.
 - FluentValidation wired into the MediatR pipeline.
@@ -53,7 +54,7 @@ TaskHub is intended to show practical .NET engineering skills that are useful in
 - Task list CRUD endpoints and Blazor UI flows.
 - Task item CRUD endpoints and Blazor UI flows.
 - Task status transitions with domain-level transition rules.
-- Task-list activity feed for list and task changes.
+- Task-list activity feed for list and task changes, with SignalR live refresh for the selected list.
 - Per-user ownership checks across command and query paths.
 - EF Core persistence, migrations, repository abstractions, and unit of work.
 - Dapper-based read repositories for paginated list, task, and activity projections.
@@ -63,7 +64,6 @@ TaskHub is intended to show practical .NET engineering skills that are useful in
 
 ## Outside the current demo
 
-- SignalR is registered as a technology direction, but live activity updates are not implemented yet.
 - The WPF project is present as a planned desktop client scaffold, not as a feature-complete client.
 - Snowflake or external warehouse integration is not implemented.
 - Reporting/export is only a possible future extension, not part of the current application.
@@ -172,7 +172,7 @@ Password: DefaultPassword123!
 5. Create a task list.
 6. Add a task with a title, description, and priority.
 7. Move the task through the available statuses.
-8. Review the activity feed for the selected task list.
+8. Review the activity feed for the selected task list. To demonstrate live updates, open the task board in a second browser session, select the same list, and create or move a task in the first session.
 9. Inspect the API through Swagger at:
 
 ```text
@@ -211,8 +211,8 @@ WPF should be presented as a planned desktop client scaffold, not as a completed
 
 ## Planned next steps
 
-- Add SignalR live updates to the existing activity feed.
 - Add a small dashboard/statistics view to the Blazor client.
 - Improve Swagger response metadata and API documentation.
 - Add screenshots or a short GIF for the README demo flow.
+- Consider extending live updates beyond the activity feed if the task board needs multi-user collaboration polish.
 - Build out the WPF client later only if desktop development becomes a priority.
