@@ -1,5 +1,6 @@
 using Microsoft.OpenApi;
 using TaskHub.Api.Filters;
+using TaskHub.Api.Hubs;
 using TaskHub.Application;
 using TaskHub.Infrastructure;
 using TaskHub.Infrastructure.Hosting;
@@ -68,6 +69,7 @@ public class Program
         app.UseAuthorization();
 
         app.MapControllers();
+        app.MapHub<TaskActivityHub>("/hubs/task-activity");
 
         app.Run();
     }
