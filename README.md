@@ -103,6 +103,8 @@ You can run the project locally in two ways:
 - Run the API and Web projects directly from an IDE or via `dotnet run`. The checked-in development appsettings provide local JWT and demo-auth values, and the launch profiles provide the local environment and application URLs.
 - Run the full stack with Docker Compose.
 
+The main portfolio demo entry point is the Blazor web app at `http://localhost:5262`. Swagger remains available at `http://localhost:8080/swagger` for API inspection, but it is secondary to the Web demo flow.
+
 Demo auth is intended only for local/demo environments (`Development` and `Testing`). When `DemoAuth:Enabled` is `true`, the API startup path seeds the configured demo user and a small portfolio-friendly task dataset for that user. The demo data seed is idempotent: it can run multiple times without duplicating the seeded lists, tasks, or activities, and it does not delete or overwrite user-created data.
 
 Compatibility with JWTs issued by older local runs is intentionally not supported; after auth-related changes, log in again and start from a fresh local database if needed.
@@ -141,9 +143,9 @@ docker compose up --build
 When running with Docker Compose, the default endpoints are:
 
 ```text
-Web: http://localhost:5262
+Web app: http://localhost:5262
 API: http://localhost:8080
-Swagger: http://localhost:8080/swagger
+Swagger/API inspection: http://localhost:8080/swagger
 SQL Server: localhost:1433
 ```
 
@@ -159,7 +161,7 @@ A simple way to present the current project:
 docker compose up --build
 ```
 
-2. Open the Blazor web client at:
+2. Open the Blazor web client at the main demo URL:
 
 ```text
 http://localhost:5262
