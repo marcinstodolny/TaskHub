@@ -2,8 +2,8 @@
 @rendermode InteractiveServer
 @implements IDisposable
 @using System.Text.Json
-@using TaskHub.Contracts.Common
-@using TaskHub.Contracts.TaskList
+@using TaskHub.Contracts.Dashboard
+@using TaskHub.Contracts.TaskActivity
 @using TaskHub.Web.Auth
 @inject AuthSession AuthSession
 @inject AuthorizedRequestExecutor AuthorizedRequestExecutor
@@ -14,12 +14,20 @@
 
 <div class="mb-4">
     <h1>TaskHub</h1>
-    <h2 class="h4 mt-3">What is TaskHub?</h2>
-    <p class="mb-0">
-        TaskHub is a lightweight workspace for organizing your work with task lists and a Kanban-style board.
-        You can create lists, add tasks, and move them across statuses to keep delivery visible.
-        This home page gives you a quick project overview and shortcuts to the most useful actions.
-    </p>
+    @if (AuthSession.IsAuthenticated)
+    {
+        <p class="lead mb-0">
+            Welcome back, @AuthSession.Username. Here is the current state of your task workspace.
+        </p>
+    }
+    else
+    {
+        <h2 class="h4 mt-3">Task planning with a live activity trail</h2>
+        <p class="mb-0">
+            TaskHub is a lightweight workspace for organizing work with task lists, a Kanban-style board,
+            per-user ownership, and live activity updates.
+        </p>
+    }
 </div>
 
 <section class="mb-4">
@@ -42,63 +50,103 @@
 </section>
 
 <section>
-    <h2 class="h4">Task Lists (preview)</h2>
-
     @if (!AuthSession.IsAuthenticated)
     {
-        <div class="alert alert-info" role="alert">
-            Sign in to load your task lists preview.
+        <h2 class="h4">Portfolio demo</h2>
+        <div class="border rounded p-3 bg-light">
+            <p class="mb-3">
+                Sign in to see the seeded task board, status summary, and recent activity feed.
+            </p>
+            <a class="btn btn-primary" href="/login?returnUrl=%2F">Login to continue</a>
         </div>
-        <a class="btn btn-primary" href="/login?returnUrl=%2F">Login to continue</a>
-    }
-    else if (!string.IsNullOrWhiteSpace(_errorMessage))
-    {
-        <div class="alert alert-danger" role="alert">@_errorMessage</div>
-    }
-    else if (_isLoadingTaskLists)
-    {
-        <div class="alert alert-info" role="status">Loading task lists preview...</div>
-    }
-    else if (_taskListsPage?.Items is null || !_taskListsPage.Items.Any())
-    {
-        <div class="alert alert-secondary" role="alert">
-            No task lists found yet. Create your first list to start planning.
-        </div>
-        <a class="btn btn-primary" href="/task-board">Go to Task Board</a>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Tasks count</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var taskList in _taskListsPage.Items)
-                    {
-                        <tr>
-                            <td>@taskList.Title</td>
-                            <td>@taskList.TasksCount</td>
-                            <td>
-                                <a class="btn btn-sm btn-outline-primary" href="/task-board">Open board</a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+        <h2 class="h4">Dashboard</h2>
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
+        }
+        else if (_isLoadingDashboard)
+        {
+            <div class="alert alert-info" role="status">Loading dashboard summary...</div>
+        }
+        else if (_dashboardSummary is null)
+        {
+            <div class="alert alert-secondary" role="alert">
+                Dashboard summary is not available right now.
+            </div>
+        }
+        else
+        {
+            <div class="row g-3 mb-4">
+                @foreach (var stat in BuildDashboardStats(_dashboardSummary))
+                {
+                    <div class="col-6 col-lg-2">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="text-muted small">@stat.Label</div>
+                                <div class="fs-3 fw-semibold">@stat.Value</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (_dashboardSummary.TaskListCount == 0)
+            {
+                <div class="alert alert-secondary" role="alert">
+                    No task lists found yet. Create your first list to start planning.
+                </div>
+                <a class="btn btn-primary" href="/task-board">Go to Task Board</a>
+            }
+            else
+            {
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <h3 class="h5 mb-0">Recent activity</h3>
+                    <a class="btn btn-sm btn-outline-primary" href="/task-board">Open board</a>
+                </div>
+
+                @if (!_dashboardSummary.RecentActivities.Any())
+                {
+                    <div class="alert alert-secondary" role="alert">
+                        No recent activity yet.
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var activity in _dashboardSummary.RecentActivities)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                                    <div>
+                                        <div>@activity.Message</div>
+                                        @if (!string.IsNullOrWhiteSpace(activity.TaskTitleSnapshot))
+                                        {
+                                            <div class="small text-muted">@activity.TaskTitleSnapshot</div>
+                                        }
+                                    </div>
+                                    <div class="small text-muted text-sm-end">
+                                        <div>@FormatActivityTime(activity.CreatedAtUtc)</div>
+                                        <div>@activity.Type</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        }
     }
 </section>
 
 @code {
     private readonly JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private PaginatedResponse<TaskListLightResponse>? _taskListsPage;
-    private bool _isLoadingTaskLists;
+    private DashboardSummaryResponse? _dashboardSummary;
+    private bool _isLoadingDashboard;
     private string? _errorMessage;
     private string? _swaggerUrl;
     private int _authStateVersion;
@@ -110,7 +158,7 @@
 
         if (AuthSession.IsAuthenticated)
         {
-            await LoadTaskListsPreviewAsync();
+            await LoadDashboardSummaryAsync();
         }
     }
 
@@ -127,9 +175,9 @@
     private async Task HandleAuthStateChangedAsync()
     {
         _authStateVersion++;
-        _taskListsPage = null;
+        _dashboardSummary = null;
         _errorMessage = null;
-        _isLoadingTaskLists = false;
+        _isLoadingDashboard = false;
 
         if (!AuthSession.IsAuthenticated)
         {
@@ -137,7 +185,7 @@
             return;
         }
 
-        await LoadTaskListsPreviewAsync();
+        await LoadDashboardSummaryAsync();
     }
 
     private string? ResolveSwaggerUrl()
@@ -159,41 +207,41 @@
             : $"{apiBaseAddress.TrimEnd('/')}/swagger/index.html";
     }
 
-    private async Task LoadTaskListsPreviewAsync()
+    private async Task LoadDashboardSummaryAsync()
     {
         var authStateVersion = _authStateVersion;
-        _isLoadingTaskLists = true;
+        _isLoadingDashboard = true;
         _errorMessage = null;
 
         try
         {
-            var taskListsPage = await TryLoadTaskListsPreviewAsync(authStateVersion);
+            var dashboardSummary = await TryLoadDashboardSummaryAsync(authStateVersion);
             if (!IsCurrentAuthState(authStateVersion))
             {
                 return;
             }
 
-            _taskListsPage = taskListsPage;
+            _dashboardSummary = dashboardSummary;
         }
         catch
         {
             if (IsCurrentAuthState(authStateVersion))
             {
-                _errorMessage = "Unable to load task lists preview right now.";
+                _errorMessage = "Unable to load dashboard summary right now.";
             }
         }
         finally
         {
             if (authStateVersion == _authStateVersion)
             {
-                _isLoadingTaskLists = false;
+                _isLoadingDashboard = false;
             }
         }
     }
 
-    private async Task<PaginatedResponse<TaskListLightResponse>?> TryLoadTaskListsPreviewAsync(int authStateVersion)
+    private async Task<DashboardSummaryResponse?> TryLoadDashboardSummaryAsync(int authStateVersion)
     {
-        using var response = await AuthorizedRequestExecutor.SendAsync(client => client.GetAsync("/api/TaskList?page=1&count=10"));
+        using var response = await AuthorizedRequestExecutor.SendAsync(client => client.GetAsync("/api/Dashboard/summary?recentActivityCount=5"));
         if (!IsCurrentAuthState(authStateVersion))
         {
             return null;
@@ -201,18 +249,32 @@
 
         if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
         {
-            _errorMessage = "Your session expired. Sign in again to load the preview.";
+            _errorMessage = "Your session expired. Sign in again to load the dashboard.";
             return null;
         }
 
         if (response.IsSuccessStatusCode)
         {
-            return await response.Content.ReadFromJsonAsync<PaginatedResponse<TaskListLightResponse>>(_serializerOptions);
+            return await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>(_serializerOptions);
         }
 
-        _errorMessage = "Unable to load task lists preview right now.";
+        _errorMessage = "Unable to load dashboard summary right now.";
         return null;
     }
 
+    private static IReadOnlyCollection<DashboardStat> BuildDashboardStats(DashboardSummaryResponse summary) =>
+    [
+        new("Task lists", summary.TaskListCount),
+        new("Total tasks", summary.TotalTaskCount),
+        new("Todo", summary.TodoCount),
+        new("In Progress", summary.InProgressCount),
+        new("Done", summary.DoneCount),
+        new("Cancelled", summary.CancelledCount)
+    ];
+
+    private static string FormatActivityTime(DateTime createdAtUtc) => createdAtUtc.ToLocalTime().ToString("g");
+
     private bool IsCurrentAuthState(int authStateVersion) => authStateVersion == _authStateVersion && AuthSession.IsAuthenticated;
+
+    private sealed record DashboardStat(string Label, int Value);
 }
