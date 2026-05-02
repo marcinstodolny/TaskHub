@@ -220,8 +220,7 @@ WPF should be presented as a planned desktop client scaffold, not as a completed
 
 ## Planned next steps
 
-- Add a small dashboard/statistics view to the Blazor client.
+- Add real README screenshots or a short GIF for the dashboard and task board demo flow.
 - Improve Swagger response metadata and API documentation.
-- Add screenshots or a short GIF for the README demo flow.
 - Consider extending live updates beyond the activity feed if the task board needs multi-user collaboration polish.
 - Build out the WPF client later only if desktop development becomes a priority.
