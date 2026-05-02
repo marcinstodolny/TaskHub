@@ -51,6 +51,7 @@ TaskHub is intended to show practical .NET engineering skills that are useful in
 
 - User registration and login with JWT access tokens.
 - Demo user and demo task data seeding for local portfolio runs.
+- Home page dashboard summary for a quick authenticated overview.
 - Task list CRUD endpoints and Blazor UI flows.
 - Task item CRUD endpoints and Blazor UI flows.
 - Task status transitions with domain-level transition rules.
@@ -174,19 +175,20 @@ Username: DefaultUser
 Password: DefaultPassword123!
 ```
 
-4. Open the Task Board.
-5. Inspect the pre-seeded task lists, including `Product Launch`, `Engineering Improvements`, and `Portfolio Demo`.
-6. Select a pre-seeded list and review its tasks across different statuses and priorities.
-7. Review the activity feed for the selected task list. It is pre-populated from the demo seed and continues to record new list/task changes.
-8. Create or update a task, then move it through the available statuses.
-9. To demonstrate SignalR live updates, open the task board in a second browser session, sign in with the same demo account, select the same task list, and create or move a task in the first session. The selected list's activity feed should refresh in the other session.
-10. Inspect the API through Swagger at:
+4. Review the home page dashboard summary for a quick overview of task lists, task status counts, and recent activity. It is a compact demo overview, not a reporting module.
+5. Open the Task Board.
+6. Inspect the pre-seeded task lists, including `Product Launch`, `Engineering Improvements`, and `Portfolio Demo`.
+7. Select a pre-seeded list and review its tasks across different statuses and priorities.
+8. Review the activity feed for the selected task list. It is pre-populated from the demo seed and continues to record new list/task changes.
+9. Create or update a task, then move it through the available statuses.
+10. To demonstrate SignalR live updates, open the task board in a second browser session, sign in with the same demo account, select the same task list, and create or move a task in the first session. The selected list's activity feed should refresh in the other session.
+11. Inspect the API through Swagger at:
 
 ```text
 http://localhost:8080/swagger
 ```
 
-11. Run the automated test suite:
+12. Run the automated test suite:
 
 ```bash
 dotnet test
@@ -218,8 +220,7 @@ WPF should be presented as a planned desktop client scaffold, not as a completed
 
 ## Planned next steps
 
-- Add a small dashboard/statistics view to the Blazor client.
+- Add real README screenshots or a short GIF for the dashboard and task board demo flow.
 - Improve Swagger response metadata and API documentation.
-- Add screenshots or a short GIF for the README demo flow.
 - Consider extending live updates beyond the activity feed if the task board needs multi-user collaboration polish.
 - Build out the WPF client later only if desktop development becomes a priority.

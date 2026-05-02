@@ -44,6 +44,7 @@ public static class DependencyInjection
 
         services.AddScoped<ITaskItemQueryRepository, TaskItemQueryRepository>();
         services.AddScoped<ITaskActivityQueryRepository, TaskActivityQueryRepository>();
+        services.AddScoped<IDashboardQueryRepository, DashboardQueryRepository>();
         services.AddScoped<ITaskItemCommandRepository, TaskItemCommandRepository>();
         services.AddScoped<ITaskActivityCommandRepository, TaskActivityCommandRepository>();
         services.AddScoped<ITaskListQueryRepository, TaskListQueryRepository>();
