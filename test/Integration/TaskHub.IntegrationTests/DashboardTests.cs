@@ -101,9 +101,30 @@ public sealed class DashboardTests(IntegrationTestFixture fixture)
         Assert.All(userASummary.RecentActivities, activity => Assert.Equal(userAList.Id, activity.TaskListId));
     }
 
-    private static async Task<DashboardSummaryResponse> GetDashboardSummaryAsync(HttpClient client)
+    [Fact]
+    public async Task GetDashboardSummary_ShouldRespectRecentActivityCount()
     {
-        var response = await client.GetAsync("/api/Dashboard/summary");
+        await fixture.ResetAsync();
+
+        using var client = await fixture.CreateAuthorizedClientAsync();
+        var taskList = await CreateTaskListAsync(client, "Dashboard activity limit list");
+        await CreateTaskItemAsync(client, taskList.Id, "First dashboard activity");
+        await CreateTaskItemAsync(client, taskList.Id, "Second dashboard activity");
+        await CreateTaskItemAsync(client, taskList.Id, "Third dashboard activity");
+
+        var summary = await GetDashboardSummaryAsync(client, recentActivityCount: 2);
+
+        Assert.Equal(2, summary.RecentActivities.Count);
+        Assert.All(summary.RecentActivities, activity => Assert.Equal(taskList.Id, activity.TaskListId));
+    }
+
+    private static async Task<DashboardSummaryResponse> GetDashboardSummaryAsync(HttpClient client, int? recentActivityCount = null)
+    {
+        var requestUri = recentActivityCount is null
+            ? "/api/Dashboard/summary"
+            : $"/api/Dashboard/summary?recentActivityCount={recentActivityCount.Value}";
+
+        var response = await client.GetAsync(requestUri);
         response.EnsureSuccessStatusCode();
 
         var payload = await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>();
