@@ -141,6 +141,14 @@ Start the full stack with Docker Compose:
 docker compose up --build
 ```
 
+The default setup keeps SQL Server data in a named volume, which is convenient for local development. For a repeatable portfolio demo with a fresh database, use the demo override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.demo.yml up --build --force-recreate
+```
+
+The demo override removes the SQL Server volume. Recreating or removing the database container therefore discards its data, while the regular Compose command continues to preserve development data.
+
 When running with Docker Compose, the default endpoints are:
 
 ```text
