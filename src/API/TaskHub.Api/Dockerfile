@@ -14,6 +14,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/API/TaskHub.Api/TaskHub.Api.csproj", "src/API/TaskHub.Api/"]
 COPY ["src/Application/TaskHub.Application/TaskHub.Application.csproj", "src/Application/TaskHub.Application/"]
+COPY ["src/Contracts/TaskHub.Contracts/TaskHub.Contracts.csproj", "src/Contracts/TaskHub.Contracts/"]
 COPY ["src/Domains/TaskHub.Domain/TaskHub.Domain.csproj", "src/Domains/TaskHub.Domain/"]
 COPY ["src/Infrastructure/TaskHub.Infrastructure/TaskHub.Infrastructure.csproj", "src/Infrastructure/TaskHub.Infrastructure/"]
 RUN dotnet restore "./src/API/TaskHub.Api/TaskHub.Api.csproj"
