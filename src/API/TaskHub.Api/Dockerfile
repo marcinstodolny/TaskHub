@@ -12,6 +12,7 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["NuGet.Config", "."]
 COPY ["src/API/TaskHub.Api/TaskHub.Api.csproj", "src/API/TaskHub.Api/"]
 COPY ["src/Application/TaskHub.Application/TaskHub.Application.csproj", "src/Application/TaskHub.Application/"]
 COPY ["src/Contracts/TaskHub.Contracts/TaskHub.Contracts.csproj", "src/Contracts/TaskHub.Contracts/"]

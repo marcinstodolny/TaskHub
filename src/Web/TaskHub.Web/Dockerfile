@@ -11,6 +11,7 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["NuGet.Config", "."]
 COPY ["src/Web/TaskHub.Web/TaskHub.Web.csproj", "src/Web/TaskHub.Web/"]
 COPY ["src/Contracts/TaskHub.Contracts/TaskHub.Contracts.csproj", "src/Contracts/TaskHub.Contracts/"]
 COPY ["src/Domains/TaskHub.Domain/TaskHub.Domain.csproj", "src/Domains/TaskHub.Domain/"]
