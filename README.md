@@ -232,3 +232,11 @@ WPF should be presented as a planned desktop client scaffold, not as a completed
 - Improve Swagger response metadata and API documentation.
 - Consider extending live updates beyond the activity feed if the task board needs multi-user collaboration polish.
 - Build out the WPF client later only if desktop development becomes a priority.
+
+### Windows and WSL development
+
+The same physical checkout supports Visual Studio on Windows and native .NET 10
+on Ubuntu 26.04 WSL2. Use the project-level WSL build/test commands in
+[the WSL development guide](docs/wsl2-development.md). WPF and the Visual Studio
+Docker project remain Windows-specific. Integration tests provision their own
+SQL Server with Testcontainers; starting the development Compose stack is unnecessary.
