@@ -1,0 +1,12 @@
+<Project>
+  <!-- Imported before NuGet selects MSBuildProjectExtensionsPath. Keep the
+       shared Windows/WSL checkout's assets and generated sources separate. -->
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <BaseOutputPath Condition="'$(OS)' == 'Windows_NT'">bin/windows/</BaseOutputPath>
+    <BaseIntermediateOutputPath Condition="'$(OS)' == 'Windows_NT'">obj/windows/</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="'$(OS)' != 'Windows_NT'">bin/linux/</BaseOutputPath>
+    <BaseIntermediateOutputPath Condition="'$(OS)' != 'Windows_NT'">obj/linux/</BaseIntermediateOutputPath>
+    <!-- Exclude both platforms and legacy, unsegmented outputs from SDK globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>
