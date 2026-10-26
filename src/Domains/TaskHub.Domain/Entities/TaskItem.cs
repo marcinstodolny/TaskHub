@@ -30,6 +30,9 @@ namespace TaskHub.Domain.Entities
             if (string.IsNullOrWhiteSpace(title?.Value))
                 return Result.Fail<TaskItem>("Title is required.");
 
+            if (taskListId == Guid.Empty)
+                return Result.Fail<TaskItem>("Task list id is required.");
+
             var task = new TaskItem(Guid.NewGuid(), taskListId, title, description, priority, TaskStatus.Todo);
 
             task.Raise(new TaskCreated(task.Id));
