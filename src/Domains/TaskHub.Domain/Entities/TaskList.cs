@@ -26,12 +26,22 @@ namespace TaskHub.Domain.Entities
                 return Result.Fail<TaskList>("User id is required.");
             }
 
+            if (title is null)
+            {
+                return Result.Fail<TaskList>("Title is required.");
+            }
+
             return Result.Success(new TaskList(Guid.NewGuid(), title, userId));
         }
 
 
         public Result Rename(TaskListTitle title)
         {
+            if (title is null)
+            {
+                return Result.Fail("Title is required.");
+            }
+
             Title = title;
             return Result.Success();
         }

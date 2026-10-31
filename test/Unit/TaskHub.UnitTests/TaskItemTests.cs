@@ -20,12 +20,28 @@ namespace TaskHub.UnitTests
         public void Create_SetsDefaults_AndRaisesEvent()
         {
             var title = TaskItemTitle.Create("Manual Testing").Value;
-            var result = TaskItem.Create(Guid.NewGuid(), title, null, TaskPriority.Normal);
+            var taskListId = Guid.NewGuid();
+            var result = TaskItem.Create(taskListId, title, null, TaskPriority.Normal);
 
             Assert.True(result.IsSuccess);
             var task = result.Value;
             Assert.NotEqual(Guid.Empty, task.Id);
+            Assert.Equal(taskListId, task.TaskListId);
             Assert.Equal(TaskStatus.Todo, task.Status);
+
+            var taskCreated = Assert.IsType<TaskCreated>(Assert.Single(task.DomainEvents));
+            Assert.Equal(task.Id, taskCreated.TaskId);
+        }
+
+        [Fact]
+        public void Create_Fails_If_TaskListId_Is_Empty()
+        {
+            var title = TaskItemTitle.Create("Manual Testing").Value;
+
+            var result = TaskItem.Create(Guid.Empty, title, null, TaskPriority.Normal);
+
+            Assert.True(result.IsFailed);
+            Assert.Contains("Task list id is required.", result.Errors);
         }
 
         [Fact]
